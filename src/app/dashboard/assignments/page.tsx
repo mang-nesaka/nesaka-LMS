@@ -22,8 +22,19 @@ export default async function AssignmentsPage() {
     });
   }
 
+  const isStudent = currentUser?.role === 'STUDENT';
+
   // Ambil semua assignment (beserta nama Course dan Teacher)
   const assignments = await prisma.assignment.findMany({
+    where: isStudent && userId ? {
+      lesson: {
+        course: {
+          enrollments: {
+            some: { studentId: userId }
+          }
+        }
+      }
+    } : {},
     include: {
       lesson: {
         include: {
