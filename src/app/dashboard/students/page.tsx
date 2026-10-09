@@ -2,6 +2,7 @@ export const instant = false;
 import { PrismaClient } from '@prisma/client';
 import { Search, UserPlus, MoreVertical, GraduationCap, Mail } from 'lucide-react';
 import { cookies } from 'next/headers';
+import ImportForm from './ImportForm';
 
 const prisma = new PrismaClient();
 
@@ -12,9 +13,10 @@ export default async function StudentsPage() {
   const currentUser = userId ? await prisma.user.findUnique({ where: { id: userId } }) : null;
   const isAdmin = currentUser?.role === 'ADMIN';
   const isTeacher = currentUser?.role === 'TEACHER';
+  const isTU = currentUser?.role === 'TU';
 
-  // Jika bukan Guru atau Admin, larang akses (atau tampilkan pesan kosong)
-  if (!isAdmin && !isTeacher) {
+  // Jika bukan Guru, Admin, atau TU, larang akses
+  if (!isAdmin && !isTeacher && !isTU) {
     return (
       <div className="text-center py-20 text-slate-500">
         Anda tidak memiliki akses ke halaman ini.
@@ -39,13 +41,15 @@ export default async function StudentsPage() {
           <p className="text-slate-500 mt-1">Kelola data siswa, pantau keaktifan, dan pencapaian akademik.</p>
         </div>
         
-        {isAdmin && (
+        {(isAdmin || isTU) && (
           <button className="flex items-center bg-indigo-600 text-white font-semibold py-2 px-4 rounded-xl hover:bg-indigo-700 transition-colors">
             <UserPlus className="w-5 h-5 mr-2" />
             Tambah Siswa
           </button>
         )}
       </div>
+
+      {(isAdmin || isTU) && <ImportForm />}
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="p-4 sm:p-6 border-b border-slate-100 flex items-center justify-between">
