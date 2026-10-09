@@ -1,3 +1,4 @@
+export const instant = false;
 import { PrismaClient } from '@prisma/client';
 import { createCourse, deleteCourse } from '@/app/actions/course';
 import { BookOpen, Plus, Trash2 } from 'lucide-react';
@@ -116,3 +117,5 @@ export default async function CoursesPage() {
     </div>
   );
 }
+
+

@@ -1,3 +1,4 @@
+export const instant = false;
 import { PrismaClient } from '@prisma/client';
 import { Search, UserPlus, MoreVertical, GraduationCap, Mail } from 'lucide-react';
 import { cookies } from 'next/headers';
@@ -125,3 +126,5 @@ export default async function StudentsPage() {
     </div>
   );
 }
+
+

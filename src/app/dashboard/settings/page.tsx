@@ -1,3 +1,4 @@
+export const instant = false;
 import { PrismaClient } from '@prisma/client';
 import { cookies } from 'next/headers';
 import SettingsForm from './SettingsForm';
@@ -33,3 +34,5 @@ export default async function SettingsPage() {
     </div>
   );
 }
+
+

@@ -1,3 +1,4 @@
+export const instant = false;
 import { PrismaClient } from '@prisma/client';
 import { createAssignment, deleteAssignment } from '@/app/actions/assignment';
 import { FileText, Plus, Trash2, Calendar, Clock } from 'lucide-react';
@@ -155,3 +156,5 @@ export default async function AssignmentsPage() {
     </div>
   );
 }
+
+
