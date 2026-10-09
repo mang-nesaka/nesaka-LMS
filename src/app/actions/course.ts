@@ -13,7 +13,7 @@ export async function createCourse(formData: FormData) {
   const teacherId = cookieStore.get('auth_token')?.value;
 
   if (!title || !teacherId) {
-    return { error: 'Judul dan ID Guru tidak valid.' };
+    throw new Error('Judul dan ID Guru tidak valid.');
   }
 
   await prisma.course.create({

@@ -12,7 +12,7 @@ export async function createAssignment(formData: FormData) {
   const dueDateStr = formData.get('dueDate') as string;
 
   if (!courseId || !title) {
-    return { error: 'Data tidak lengkap.' };
+    throw new Error('Data tidak lengkap.');
   }
 
   // Karena Assignment di skema terhubung ke Lesson, kita cek apakah sudah ada Lesson di Course ini
