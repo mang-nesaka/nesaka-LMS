@@ -2,7 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 import ExcelJS from 'exceljs';
-import { populateFpdWorksheet } from '@/lib/excelFpd';
+import { populateExactFpdWorksheet } from '@/lib/excelFpd';
 
 const prisma = new PrismaClient();
 
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
 
     const programTitle = record.student.enrollments.map(e => e.course.title).join(", ") || 'Teknik Otomotif';
     const worksheet = workbook.addWorksheet(`F-PD ${record.namaLengkap.slice(0, 20)}`);
-    populateFpdWorksheet(worksheet, record, programTitle);
+    populateExactFpdWorksheet(worksheet, record, programTitle);
 
     const buffer = await workbook.xlsx.writeBuffer();
     const cleanName = record.namaLengkap.replace(/[^a-zA-Z0-9]/g, '_');
@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
       const programTitle = record.student.enrollments.map(e => e.course.title).join(", ") || 'Teknik Otomotif';
       
       const worksheet = workbook.addWorksheet(safeSheetName);
-      populateFpdWorksheet(worksheet, record, programTitle);
+      populateExactFpdWorksheet(worksheet, record, programTitle);
     });
   }
 
