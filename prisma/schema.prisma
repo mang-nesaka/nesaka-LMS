@@ -23,6 +23,7 @@ model User {
   enrollments      Enrollment[]
   submissions      Submission[]
   dapodikForm      DapodikForm?
+  examResults      ExamResult[]
 }
 
 model DapodikForm {
@@ -117,6 +118,7 @@ model Course {
   teacher     User         @relation("TeacherCourses", fields: [teacherId], references: [id])
   enrollments Enrollment[]
   lessons     Lesson[]
+  exams       Exam[]
 }
 
 model Enrollment {
@@ -171,3 +173,51 @@ model Submission {
   assignment Assignment @relation(fields: [assignmentId], references: [id])
   student    User       @relation(fields: [studentId], references: [id])
 }
+
+model Exam {
+  id              String       @id @default(cuid())
+  courseId        String
+  title           String
+  description     String?
+  durationMinutes Int          @default(60)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  course          Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  questions       Question[]
+  results         ExamResult[]
+}
+
+model Question {
+  id             String   @id @default(cuid())
+  examId         String
+  questionNumber Int
+  questionText   String   // Mendukung teks biasa, KaTeX math rumus, dan Arab RTL
+  imageUrl       String?  // Opsional URL gambar soal
+  optionA        String
+  optionB        String
+  optionC        String
+  optionD        String
+  optionE        String?
+  correctAnswer  String   // "A", "B", "C", "D", "E"
+
+  exam           Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+}
+
+model ExamResult {
+  id              String   @id @default(cuid())
+  examId          String
+  studentId       String
+  score           Float
+  totalCorrect    Int
+  totalQuestions  Int
+  answers         Json     // Catatan jawaban siswa
+  violationsCount Int      @default(0) // Catatan pelanggaran keluar tab/layar ujian
+  submittedAt     DateTime @default(now())
+
+  exam            Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  student         User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([examId, studentId])
+}
+

@@ -3,14 +3,15 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { LayoutDashboard, BookOpen, Users, FileText, Settings, LogOut, Menu, FileSpreadsheet } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Users, FileText, Settings, LogOut, Menu, FileSpreadsheet, Laptop } from 'lucide-react';
 import { useState } from 'react';
 import { logout } from '@/app/actions/auth';
 
 const sidebarMenus = [
   { name: 'Dashboard Utama', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Daftar Kelas', href: '/dashboard/courses', icon: BookOpen },
-  { name: 'Tugas & Ujian', href: '/dashboard/assignments', icon: FileText },
+  { name: 'Tugas Harian', href: '/dashboard/assignments', icon: FileText },
+  { name: 'Ujian CBT', href: '/dashboard/exams', icon: Laptop },
   { name: 'Manajemen Siswa', href: '/dashboard/students', icon: Users },
   { name: 'Formulir Dapodik', href: '/dashboard/dapodik', icon: FileSpreadsheet },
   { name: 'Pengaturan', href: '/dashboard/settings', icon: Settings },

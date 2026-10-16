@@ -54,8 +54,8 @@ export default async function AssignmentsPage() {
     <div className="space-y-8">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">Tugas & Ujian</h2>
-          <p className="text-slate-500 mt-1">Kelola dan pantau semua tugas pembelajaran siswa.</p>
+          <h2 className="text-2xl font-bold text-slate-800">Tugas Harian</h2>
+          <p className="text-slate-500 mt-1">Kelola dan pantau semua tugas pembelajaran harian siswa.</p>
         </div>
       </div>
 
