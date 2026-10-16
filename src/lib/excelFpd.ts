@@ -1,6 +1,131 @@
 import ExcelJS from 'exceljs';
-import fs from 'fs';
-import path from 'path';
+
+export const RAW_FPD_TEMPLATE_CSV = `FORMULIR PESERTA DIDIK,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,F-PD,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Tanggal : ,,,,15,,/,07,, /,2026,,,,,,,,,,,,,,,,,,,REG  :,,,,1,5, /,0,7, /,2,0,2,5
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+ - ,Tingkat,,,,,, ,,  ,  :,1,0,,,Program,,, :,Teknik Otomotif,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+IDENTITAS PESERTA DIDIK (WAJIB DI ISI),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+a.,Nama Lengkap,,,,,,,,,  :, ADIT AVRIL LIYANTO,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+b.,Jenis Kelamin,,,,,,,,,  :,Laki-laki,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+c.,NISN,,,,,,,,,  :,0,0,9,3,9,8,8,1,5,3,,,,NIS,,  :,2,5,2,6,1,0,2,0,2,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+e.,NOMOR SERI IJAZAH,,,,,,,,,  :,,,,,,,,,,,,,,,,,,,,,*) diisikan data dari jenjang sebelumnya,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+f.,No. Ujian Sekolah Kelas 9,,,,,,,,,  :,,,,,,,,,,,,,,,,,,,,,*) diisikan data dari jenjang sebelumnya,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+g.,No.Induk Kependudukan(NIK),,,,,,,,,  :,3212221504090005,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,NPSN Sekolah Asal,,,,,,,,,  :,,,,,,,,,,,,,,,,,,,,,*) diisikan data dari jenjang sebelumnya,,,,,,,,,,,
+,Nama Sekolah Asal,,,,,,,,,  :, ,,,,,,,,,,,,,,,,,,,,*) diisikan data dari jenjang sebelumnya,,,,,,,,,,,
+h.,"Tempat, Tgl Lahir",,,,,,,,,  :,Indramayu,,,,,,,,,,,,,,,,,,,,",",1,5,/,0,4,/,2,0,0,9,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+i.,Agama,,,,,,,,,  :,Islam,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+j.,Berkebutuhan Khusus,,,,,,,,,  :,Tidak ada,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+g.,Alamat Tempat Tinggal,,,,,,,,,  :,Blok Kebon,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+  -,Dusun,,,,,,,,,  :,,,,,,,,,,,,,,,,,,,,,,,RT,,,,RW,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+  -,Kelurahan / Desa,,,,,,,,,  :,Sidamulya,,,,,,,,,,,,,,,,,,,,,,Kode Pos,,,45255,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+  -,Kecamatan,,,,,,,,,  :,Sidamulya,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+  -,Kabupaten / Kota,,,,,,,,,  :,Kec. Bongas,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+  -,Propinsi,,,,,,,,,  :,Kab. Indramayu,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+I.,Alat Transportasi ke Sekolah,,,,,,,,,  :,Sepeda motor,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+m.,Jenis Tinggal,,,,,,,,,  :,Bersama orang tua,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+n.,No Telepon Rumah,,,,,,,,,  :,,,,,,,,,,,,,,No. Hp,,  :,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+o.,Email Pribadi,,,,,,,,,  :,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+p.,No. KKS,,,,,,,,,  :,,,,,,,,,,,,,,,,,,,,,,,,,*) KKS  : Kartu Keluarga Sejahtera,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+q.,Apakah Penerima KPS / PKH,,,,,,,,,  :,Tidak ,,,,No. KPS :,,,,,,,,,,,,,,,,,,,,*) KPS  : Kartu Perlindungan Sosial,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+-,Usulan dari sekolah Layak PIP,,,,,,,,,  :,Ya ,,,,Alasan Layak :,,,,Siswa Miskin/Rentan Miskin,,,,,,,,,,,,,,,,*) PIP  : Program Indonesia Pintar,,,,,,,
+-,Penerima KIP,,,,,,,,,  :,Tidak ,,,,No. KIP,,,,,,,,,,,,,,,,,,,,*) KIP  : Kartu Indonesia Pintar,,,,,,,
+-,Nama Tertera di KIP,,,,,,,,,  :,0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+-,Alasan Menolak KIP,,,,,,,,,  :,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+-,No Registrasi Akta Lahir,,,,,,,,,  :,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+-,Lintang,,,,,,,,,  :,-6.377900000000,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+-,Bujur,,,,,,,,,  :,108.034900000000,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+DATA AYAH KANDUNG (WAJIB DIISI),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+r.,Nama Ayah,,,,,,,,,  :,Ahmad,,,,,,,,,,,,,,,,,,,,,,,,Tahun Lahir,,,,0,,,
+,  -,Berkebutuhan Khusus,,,,,,,,  :,Tidak ada,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,  -,Pekerjaan,,,,,,,,  :,Pedagang Kecil,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,  -,Pendidikan,,,,,,,,  :,-,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,  -,Penghasilan Bulanan,,,,,,,,  :," Kurang dari Rp. 500,000    ",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+DATA IBU KANDUNG (WAJIB DIISI),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+s.,Nama Ibu,,,,,,,,,  :,Taswinah,,,,,,,,,,,,,,,,,,,,,,,,Tahun Lahir,,,,1,9,9,0
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,  -,Berkebutuhan Khusus,,,,,,,,  :,Tidak ada,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,  -,Pekerjaan,,,,,,,,  :,Pedagang Kecil,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,  -,Pendidikan,,,,,,,,  :,SD / sederajat,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,  -,Penghasilan Bulanan,,,,,,,,  :,"Kurang dari Rp. 500,000",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+DATA WALI,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+t.,Nama Wali,,,,,,,,,  :,,,,,,,,,,,,,,,,,,,,,,,,,Tahun Lahir,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,  -,Pekerjaan,,,,,,,,  :,-,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,  -,Pendidikan,,,,,,,,  :,-,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,  -,Penghasilan,,,,,,,,  :,-,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+DATA PERIODIK (WAJIB DIISI),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+u.,Tinggi Badan,,,,,,,,,,,  :,1,6,0,cm,,,,,,v.,Berat Badan,,,,,4,5,,kg,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+w.,Jarak Tempat Tinggal Kesekolah,,,,,,,,,,,  :,2,,,,,,,,,,"2) lebih dari 1km,sebutkan :",,,,,,,,1,5,km,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+x.,Waktu Tempuh Berangkat Kesekolah,,,,,,,,,,,  :,0,,,,,,,,,,"2) jika lebih dari 60 menit,sebutkan :",,,,,,,,,,,1,5,,Menit,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+y.,Jumlah Saudara Kandung  ,,,,,,,,,,,  :,0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+y1.,Anak Ke,,,,,,,,,,,  :,0,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+y2.,Cita-cita,,,,,,,,,,,  :,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+y3.,Hobi,,,,,,,,,,,  :,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+y4.,Pernah TK/Paud,,,,,,,,,,,  :,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+DATA PERIODIK (WAJIB DIISI),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+z.,Jenis Prestasi,,,,,,,,Tingkat,,,,,Nama Prestasi,,,,,,,,,,,,,Tahun,,,,,Penyelenggaraan,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,     ,,,,,,,,,,,,,     ,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,     ,,,,,,,,,,,,,     ,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,     ,,,,,,,,,,,,,     ,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,     ,,,,,,,,,,,,,     ,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+DATA PERIODIK (WAJIB DIISI),,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+aa,,Jenis,,,,,Penyelenggara / Sumber,,,,,,,,,,,,,,,,,,,,,,,,,,Tahun Mulai,,,,,Tahun Selesai,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,Yang bertanda tangan Orang Tua/Wali atau Siswa,,,,,,,,,,,,,,,,,,,,,,,,,,,,," ………………………………., ………………………………………………………………",,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,bertanggung jawab secara hukum terhadap kebenaran data yang tercantum.,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,"Responden,",,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,(…………………………………………………………………..),,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,Tanda Tangan & Nama Terang,,,,,,,,,`;
 
 function parseCSVLine(text: string): string[] {
   const result: string[] = [];
@@ -26,13 +151,10 @@ function parseCSVLine(text: string): string[] {
   return result;
 }
 
-// Baca template mentah
-const rawTemplatePath = path.join(process.cwd(), 'src/lib/template_fpd.raw.csv');
-const rawTemplate = fs.readFileSync(rawTemplatePath, 'utf8');
-const templateRows = rawTemplate.split(/\r?\n/).map(parseCSVLine);
+const templateRows = RAW_FPD_TEMPLATE_CSV.split(/\r?\n/).map(parseCSVLine);
 
 export function buildExactFpdGrid(r: any, programTitle?: string): string[][] {
-  // Deep clone matrix template (127 baris x 43 kolom)
+  // Deep clone template grid (127 baris x 43 kolom)
   const grid: string[][] = templateRows.map(row => [...row]);
 
   // Tanggal submit
@@ -46,7 +168,6 @@ export function buildExactFpdGrid(r: any, programTitle?: string): string[][] {
     grid[2][4] = d;
     grid[2][7] = m;
     grid[2][10] = y;
-    // REG digits: d[0], d[1], '/', m[0], m[1], '/', y[0], y[1], y[2], y[3]
     const regDigits = [d[0], d[1], '/', m[0], m[1], '/', y[0], y[1], y[2], y[3]];
     regDigits.forEach((char, idx) => {
       if (grid[2][33 + idx] !== undefined) grid[2][33 + idx] = char;
@@ -95,7 +216,6 @@ export function buildExactFpdGrid(r: any, programTitle?: string): string[][] {
   if (grid[21]) {
     grid[21][11] = r.tempatLahir || '';
     if (r.tanggalLahir) {
-      // Misal format YYYY-MM-DD atau DD/MM/YYYY
       const parts = r.tanggalLahir.split(/[-/]/);
       let tD = '01', tM = '01', tY = '2009';
       if (parts.length === 3) {
@@ -200,13 +320,9 @@ export function buildExactFpdGrid(r: any, programTitle?: string): string[][] {
     grid[59][11] = r.namaAyah || '';
     grid[59][39] = r.tahunLahirAyah || '';
   }
-  // Row 61 (Index 60): Kebutuhan Ayah
   if (grid[60]) grid[60][11] = r.kebutuhanAyah || 'Tidak ada';
-  // Row 63 (Index 62): Pekerjaan Ayah
   if (grid[62]) grid[62][11] = r.pekerjaanAyah || '';
-  // Row 64 (Index 63): Pendidikan Ayah
   if (grid[63]) grid[63][11] = r.pendidikanAyah || '';
-  // Row 66 (Index 65): Penghasilan Ayah
   if (grid[65]) grid[65][11] = r.penghasilanAyah || '';
 
   // DATA IBU
@@ -218,58 +334,41 @@ export function buildExactFpdGrid(r: any, programTitle?: string): string[][] {
       grid[69][39] = tIbu[0]; grid[69][40] = tIbu[1]; grid[69][41] = tIbu[2]; grid[69][42] = tIbu[3];
     }
   }
-  // Row 72 (Index 71): Kebutuhan Ibu
   if (grid[71]) grid[71][11] = r.kebutuhanIbu || 'Tidak ada';
-  // Row 74 (Index 73): Pekerjaan Ibu
   if (grid[73]) grid[73][11] = r.pekerjaanIbu || '';
-  // Row 76 (Index 75): Pendidikan Ibu
   if (grid[75]) grid[75][11] = r.pendidikanIbu || '';
-  // Row 78 (Index 77): Penghasilan Ibu
   if (grid[77]) grid[77][11] = r.penghasilanIbu || '';
 
   // DATA WALI
-  // Row 82 (Index 81): Nama Wali & Tahun Lahir
   if (grid[81]) {
     grid[81][11] = r.namaWali || '';
     grid[81][39] = r.tahunLahirWali || '';
   }
-  // Row 84 (Index 83): Pekerjaan Wali
   if (grid[83]) grid[83][11] = r.pekerjaanWali || '';
-  // Row 86 (Index 85): Pendidikan Wali
   if (grid[85]) grid[85][11] = r.pendidikanWali || '';
-  // Row 88 (Index 87): Penghasilan Wali
   if (grid[87]) grid[87][11] = r.penghasilanWali || '';
 
   // DATA PERIODIK
-  // Row 92 (Index 91): Tinggi & Berat Badan
   if (grid[91]) {
     const tb = String(r.tinggiBadan || '').replace(/\D/g, '').padStart(3, ' ');
     grid[91][13] = tb[0]; grid[91][14] = tb[1]; grid[91][15] = tb[2];
     const bb = String(r.beratBadan || '').replace(/\D/g, '').padStart(2, ' ');
     grid[91][28] = bb[0]; grid[91][29] = bb[1];
   }
-  // Row 94 (Index 93): Jarak Sekolah
   if (grid[93]) {
     grid[93][13] = r.jarakSekolah?.includes('Lebih') ? '2' : '1';
   }
-  // Row 96 (Index 95): Waktu Tempuh
   if (grid[95]) {
     const wt = String(r.waktuTempuh || '').replace(/\D/g, '').padStart(2, '0');
     grid[95][34] = wt[0]; grid[95][35] = wt[1];
   }
-  // Row 98 (Index 97): Jumlah Saudara
   if (grid[97]) grid[97][13] = String(r.jmlSaudara || '0');
-  // Row 100 (Index 99): Anak Ke-
   if (grid[99]) grid[99][13] = String(r.anakKe || '1');
-  // Row 102 (Index 101): Cita-cita
   if (grid[101]) grid[101][13] = r.citaCita || '';
-  // Row 104 (Index 103): Hobi
   if (grid[103]) grid[103][13] = r.hobi || '';
-  // Row 106 (Index 105): Pernah TK/Paud
   if (grid[105]) grid[105][13] = r.asalTkPaud || 'Ya';
 
   // Tanda Tangan
-  // Row 125 (Index 124): Nama Siswa di tanda tangan
   if (grid[124]) {
     grid[124][32] = `( ${r.namaLengkap} )`;
   }
@@ -282,10 +381,22 @@ export function populateExactFpdWorksheet(worksheet: ExcelJS.Worksheet, r: any, 
 
   // Set default column widths for 43 columns
   worksheet.columns = Array.from({ length: 43 }).map((_, idx) => ({
-    width: idx === 1 ? 25 : idx === 11 ? 28 : 4
+    width: idx === 1 ? 28 : idx === 11 ? 32 : 4
   }));
 
   grid.forEach((rowValues) => {
     worksheet.addRow(rowValues);
   });
+}
+
+export function gridToCsv(grid: string[][]): string {
+  return grid.map(row => {
+    return row.map(cell => {
+      if (cell === undefined || cell === null) return '';
+      if (cell.includes(',') || cell.includes('"') || cell.includes('\n') || cell.includes('\r')) {
+        return `"${cell.replace(/"/g, '""')}"`;
+      }
+      return cell;
+    }).join(',');
+  }).join('\r\n');
 }

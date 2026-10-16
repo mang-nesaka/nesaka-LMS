@@ -86,14 +86,24 @@ export default async function DapodikPage() {
         </div>
 
         {isTUOrAdmin && (
-          <a
-            href="/api/dapodik/export"
-            download
-            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 px-5 rounded-xl transition-all shadow-md hover:shadow-lg"
-          >
-            <Download className="w-5 h-5" />
-            Download Semua F-PD (.xlsx)
-          </a>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <a
+              href="/api/dapodik/export?format=xlsx"
+              download
+              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 px-4 rounded-xl transition-all shadow-md hover:shadow-lg text-sm"
+            >
+              <Download className="w-4 h-4" />
+              Download Excel F-PD (.xlsx)
+            </a>
+            <a
+              href="/api/dapodik/export?format=csv"
+              download
+              className="flex items-center gap-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold py-2.5 px-4 rounded-xl transition-all shadow-sm text-sm"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+              Download Template CSV (.csv)
+            </a>
+          </div>
         )}
       </div>
 
@@ -191,15 +201,25 @@ export default async function DapodikPage() {
                       })}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <a
-                        href={`/api/dapodik/export?studentId=${item.studentId}`}
-                        download
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg text-xs font-semibold transition-colors"
-                        title="Unduh Formulir F-PD Resmi Siswa Ini (.xlsx)"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                        F-PD Excel
-                      </a>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <a
+                          href={`/api/dapodik/export?studentId=${item.studentId}&format=xlsx`}
+                          download
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg text-xs font-semibold transition-colors"
+                          title="Unduh Formulir F-PD Resmi Siswa Ini (.xlsx)"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          .XLSX
+                        </a>
+                        <a
+                          href={`/api/dapodik/export?studentId=${item.studentId}&format=csv`}
+                          download
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-lg text-xs font-semibold transition-colors"
+                          title="Unduh Formulir CSV Persis Template (.csv)"
+                        >
+                          .CSV
+                        </a>
+                      </div>
                     </td>
                   </tr>
                 ))

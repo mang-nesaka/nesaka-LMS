@@ -2,7 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 import ExcelJS from 'exceljs';
-import { populateExactFpdWorksheet } from '@/lib/excelFpd';
+import { populateExactFpdWorksheet, buildExactFpdGrid, gridToCsv } from '@/lib/excelFpd';
 
 const prisma = new PrismaClient();
 
@@ -25,10 +25,7 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const targetStudentId = searchParams.get('studentId');
-
-  const workbook = new ExcelJS.Workbook();
-  workbook.creator = 'LMS Sekolah - SMK Negeri 1 Kandanghaur';
-  workbook.created = new Date();
+  const format = searchParams.get('format') || 'xlsx';
 
   if (targetStudentId) {
     // Unduh spesifik satu siswa
@@ -51,12 +48,28 @@ export async function GET(request: NextRequest) {
     }
 
     const programTitle = record.student.enrollments.map(e => e.course.title).join(", ") || 'Teknik Otomotif';
+    const cleanName = record.namaLengkap.replace(/[^a-zA-Z0-9]/g, '_');
+
+    // Jika format CSV diminta
+    if (format === 'csv') {
+      const grid = buildExactFpdGrid(record, programTitle);
+      const csvContent = '\uFEFF' + gridToCsv(grid);
+      return new NextResponse(csvContent, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/csv; charset=utf-8',
+          'Content-Disposition': `attachment; filename="F-PD_${cleanName}_${record.nisn}.csv"`,
+        },
+      });
+    }
+
+    // Default: format Excel .xlsx
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'LMS Sekolah';
     const worksheet = workbook.addWorksheet(`F-PD ${record.namaLengkap.slice(0, 20)}`);
     populateExactFpdWorksheet(worksheet, record, programTitle);
 
     const buffer = await workbook.xlsx.writeBuffer();
-    const cleanName = record.namaLengkap.replace(/[^a-zA-Z0-9]/g, '_');
-
     return new NextResponse(buffer, {
       status: 200,
       headers: {
@@ -81,13 +94,40 @@ export async function GET(request: NextRequest) {
     orderBy: { createdAt: 'asc' },
   });
 
+  const dateStr = new Date().toISOString().split('T')[0];
+
+  // Jika format CSV untuk semua siswa
+  if (format === 'csv') {
+    if (records.length === 0) {
+      return new NextResponse('Belum ada data formulir Dapodik yang tersimpan.', { status: 200 });
+    }
+    // Gabungkan setiap siswa dengan pemisah baris
+    const csvParts = records.map((record) => {
+      const programTitle = record.student.enrollments.map(e => e.course.title).join(", ") || 'Teknik Otomotif';
+      const grid = buildExactFpdGrid(record, programTitle);
+      return gridToCsv(grid);
+    });
+
+    const fullCsv = '\uFEFF' + csvParts.join('\r\n\r\n\r\n');
+    return new NextResponse(fullCsv, {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Disposition': `attachment; filename="Format_F-PD_Dapodik_Semua_Siswa_${dateStr}.csv"`,
+      },
+    });
+  }
+
+  // Format XLSX untuk semua siswa
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'LMS Sekolah';
+  workbook.created = new Date();
+
   if (records.length === 0) {
     const emptySheet = workbook.addWorksheet('Data Kosong');
     emptySheet.addRow(['Belum ada data formulir Dapodik yang tersimpan.']);
   } else {
-    // Buat sheet terpisah untuk setiap siswa dengan format resmi F-PD
     records.forEach((record, index) => {
-      // Batasi nama sheet max 31 karakter sesuai aturan Excel
       const rawSheetName = `${index + 1}. ${record.namaLengkap}`;
       const safeSheetName = rawSheetName.replace(/[:\\/?*[\]]/g, '').slice(0, 31);
       const programTitle = record.student.enrollments.map(e => e.course.title).join(", ") || 'Teknik Otomotif';
@@ -98,8 +138,6 @@ export async function GET(request: NextRequest) {
   }
 
   const buffer = await workbook.xlsx.writeBuffer();
-  const dateStr = new Date().toISOString().split('T')[0];
-
   return new NextResponse(buffer, {
     status: 200,
     headers: {
