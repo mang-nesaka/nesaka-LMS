@@ -28,7 +28,8 @@ export default async function StudentsPage() {
   const students = await prisma.user.findMany({
     where: { role: 'STUDENT' },
     include: {
-      _count: { select: { enrollments: true, submissions: true } }
+      _count: { select: { enrollments: true, submissions: true } },
+      dapodikForm: { select: { id: true } }
     },
     orderBy: { name: 'asc' }
   });
@@ -41,12 +42,22 @@ export default async function StudentsPage() {
           <p className="text-slate-500 mt-1">Kelola data siswa, pantau keaktifan, dan pencapaian akademik.</p>
         </div>
         
-        {(isAdmin || isTU) && (
-          <button className="flex items-center bg-indigo-600 text-white font-semibold py-2 px-4 rounded-xl hover:bg-indigo-700 transition-colors">
-            <UserPlus className="w-5 h-5 mr-2" />
-            Tambah Siswa
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          {(isAdmin || isTU) && (
+            <a
+              href="/dashboard/dapodik"
+              className="flex items-center bg-white border border-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-xl hover:bg-slate-50 transition-colors shadow-sm"
+            >
+              Lihat Rekap Dapodik
+            </a>
+          )}
+          {(isAdmin || isTU) && (
+            <button className="flex items-center bg-indigo-600 text-white font-semibold py-2 px-4 rounded-xl hover:bg-indigo-700 transition-colors shadow-sm">
+              <UserPlus className="w-5 h-5 mr-2" />
+              Tambah Siswa
+            </button>
+          )}
+        </div>
       </div>
 
       {(isAdmin || isTU) && <ImportForm />}
@@ -71,6 +82,7 @@ export default async function StudentsPage() {
               <tr>
                 <th className="px-6 py-4">Informasi Siswa</th>
                 <th className="px-6 py-4 text-center">Kelas Diikuti</th>
+                <th className="px-6 py-4 text-center">Status Dapodik</th>
                 <th className="px-6 py-4 text-center">Tugas Dikumpulkan</th>
                 <th className="px-6 py-4">Tanggal Bergabung</th>
                 <th className="px-6 py-4 text-right">Aksi</th>
@@ -79,7 +91,7 @@ export default async function StudentsPage() {
             <tbody className="divide-y divide-slate-100">
               {students.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
+                  <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
                     Belum ada siswa yang terdaftar.
                   </td>
                 </tr>
@@ -108,7 +120,18 @@ export default async function StudentsPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
+                      {student.dapodikForm ? (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
+                          Sudah Isi
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700">
+                          Belum Isi
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
                         {student._count.submissions} Tugas
                       </span>
                     </td>

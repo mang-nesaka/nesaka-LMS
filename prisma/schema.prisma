@@ -22,6 +22,88 @@ model User {
   coursesAsTeacher Course[]     @relation("TeacherCourses")
   enrollments      Enrollment[]
   submissions      Submission[]
+  dapodikForm      DapodikForm?
+}
+
+model DapodikForm {
+  id               String   @id @default(cuid())
+  studentId        String   @unique
+  // 1. Identitas
+  namaLengkap      String
+  jenisKelamin     String
+  nisn             String
+  nis              String?
+  noIjazah         String?
+  noUjian          String?
+  nik              String
+  npsnAsal         String?
+  sekolahAsal      String?
+  tempatLahir      String
+  tanggalLahir     String
+  agama            String
+  berkebutuhanKhusus String?
+  alamat           String
+  rtRw             String?
+  dusun            String?
+  kelurahan        String?
+  kecamatan        String?
+  kabupaten        String?
+  propinsi         String?
+  kodePos          String?
+  transportasi     String?
+  jenisTinggal     String?
+  noTelp           String?
+  noHp             String
+  emailPribadi     String?
+  noKks            String?
+  penerimaKps      String?
+  usulanPip        String?
+  penerimaKip      String?
+  noKip            String?
+  namaDiKip        String?
+  alasanTolakKip   String?
+  noAktaLahir      String?
+  lintang          String?
+  bujur            String?
+
+  // 2. Data Ayah
+  namaAyah         String
+  tahunLahirAyah   String?
+  kebutuhanAyah    String?
+  pekerjaanAyah    String?
+  pendidikanAyah   String?
+  penghasilanAyah  String?
+
+  // 3. Data Ibu
+  namaIbu          String
+  tahunLahirIbu    String?
+  kebutuhanIbu     String?
+  pekerjaanIbu     String?
+  pendidikanIbu    String?
+  penghasilanIbu   String?
+
+  // 4. Data Wali (Opsional)
+  namaWali         String?
+  tahunLahirWali   String?
+  pekerjaanWali    String?
+  pendidikanWali   String?
+  penghasilanWali  String?
+
+  // 5. Data Periodik
+  tinggiBadan      String?
+  beratBadan       String?
+  jarakSekolah     String?
+  waktuTempuh      String?
+  jmlSaudara       String?
+  anakKe           String?
+  citaCita         String?
+  hobi             String?
+  asalTkPaud       String?
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  student          User     @relation(fields: [studentId], references: [id])
 }
 
 model Course {

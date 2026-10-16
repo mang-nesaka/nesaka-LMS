@@ -27,9 +27,8 @@ export async function importStudentsCSV(formData: FormData) {
   const text = await file.text();
   const rows = text.split('\n').map(row => row.trim()).filter(row => row.length > 0);
   
-  // Asumsi CSV header: name, email, password
-  // Row 0 adalah header, kita lewati.
-  const usersToCreate = [];
+  // Asumsi CSV header: name, email, password, nama_kelas
+  let successCount = 0;
 
   for (let i = 1; i < rows.length; i++) {
     const columns = rows[i].split(',');
@@ -37,28 +36,54 @@ export async function importStudentsCSV(formData: FormData) {
       const name = columns[0].trim();
       const email = columns[1].trim();
       const password = columns[2].trim();
+      const courseTitle = columns.length >= 4 ? columns[3].trim() : null;
 
       if (name && email && password) {
-        usersToCreate.push({
-          name,
-          email,
-          password, // Pada produksi, harus di-hash
-          role: 'STUDENT'
+        // 1. Buat atau update User (Siswa)
+        const user = await prisma.user.upsert({
+          where: { email },
+          update: { name, password },
+          create: { name, email, password, role: 'STUDENT' }
         });
+
+        // 2. Jika ada nama_kelas di CSV, masukkan siswa ke kelas tersebut
+        if (courseTitle) {
+          // Cari ID kelas berdasarkan nama kelasnya
+          const course = await prisma.course.findFirst({
+            where: { title: courseTitle }
+          });
+
+          if (course) {
+            // Mendaftarkan siswa ke kelas tersebut (Enrollment)
+            // Cek apakah sudah terdaftar
+            const existingEnrollment = await prisma.enrollment.findUnique({
+              where: {
+                studentId_courseId: {
+                  studentId: user.id,
+                  courseId: course.id,
+                }
+              }
+            });
+
+            if (!existingEnrollment) {
+              await prisma.enrollment.create({
+                data: {
+                  studentId: user.id,
+                  courseId: course.id,
+                }
+              });
+            }
+          }
+        }
+        successCount++;
       }
     }
   }
 
-  if (usersToCreate.length === 0) {
+  if (successCount === 0) {
     throw new Error('Tidak ada data valid yang ditemukan di file CSV.');
   }
 
-  // Insert semua data siswa
-  // Menggunakan createMany untuk bulk insert
-  await prisma.user.createMany({
-    data: usersToCreate,
-    skipDuplicates: true, // Lewati jika email sudah ada
-  });
-
   revalidatePath('/dashboard/students');
+  revalidatePath('/dashboard/assignments');
 }

@@ -26,11 +26,11 @@ export default function ImportForm() {
   }
 
   const downloadTemplate = () => {
-    const csvContent = "data:text/csv;charset=utf-8,name,email,password\nBudi Santoso,budi@sekolah.com,password123\nSiti Aminah,siti@sekolah.com,password123";
+    const csvContent = "data:text/csv;charset=utf-8,name,email,password,nama_kelas\nBudi Santoso,budi@sekolah.com,password123,Matematika Kelas X-A\nSiti Aminah,siti@sekolah.com,password123,Biologi Kelas X-B";
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "template_siswa.csv");
+    link.setAttribute("download", "template_siswa_dengan_kelas.csv");
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
