@@ -92,7 +92,7 @@ export default async function DapodikPage() {
             className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 px-5 rounded-xl transition-all shadow-md hover:shadow-lg"
           >
             <Download className="w-5 h-5" />
-            Download Format Spreadsheet (.CSV)
+            Download Semua F-PD (.xlsx)
           </a>
         )}
       </div>
@@ -149,12 +149,13 @@ export default async function DapodikPage() {
                 <th className="px-6 py-4">Nama Orang Tua</th>
                 <th className="px-6 py-4">Kontak (HP)</th>
                 <th className="px-6 py-4 text-center">Tgl Submit</th>
+                <th className="px-6 py-4 text-right">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {allSubmissions.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
+                  <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
                     Belum ada siswa yang mengisi formulir Dapodik.
                   </td>
                 </tr>
@@ -188,6 +189,17 @@ export default async function DapodikPage() {
                         month: 'short',
                         year: 'numeric'
                       })}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <a
+                        href={`/api/dapodik/export?studentId=${item.studentId}`}
+                        download
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg text-xs font-semibold transition-colors"
+                        title="Unduh Formulir F-PD Resmi Siswa Ini (.xlsx)"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        F-PD Excel
+                      </a>
                     </td>
                   </tr>
                 ))
