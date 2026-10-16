@@ -379,14 +379,132 @@ export function buildExactFpdGrid(r: any, programTitle?: string): string[][] {
 export function populateExactFpdWorksheet(worksheet: ExcelJS.Worksheet, r: any, programTitle?: string) {
   const grid = buildExactFpdGrid(r, programTitle);
 
-  // Set default column widths for 43 columns
+  // Pastikan gridlines bawaan Excel selalu aktif dan terlihat
+  worksheet.views = [{ showGridLines: true }];
+
+  // Atur lebar 43 kolom agar proporsional
   worksheet.columns = Array.from({ length: 43 }).map((_, idx) => ({
-    width: idx === 1 ? 28 : idx === 11 ? 32 : 4
+    width: idx === 1 ? 26 : idx === 11 ? 30 : 4.5
   }));
 
+  const thinBox: Partial<ExcelJS.Borders> = {
+    top: { style: 'thin', color: { argb: 'FF000000' } },
+    left: { style: 'thin', color: { argb: 'FF000000' } },
+    bottom: { style: 'thin', color: { argb: 'FF000000' } },
+    right: { style: 'thin', color: { argb: 'FF000000' } }
+  };
+
+  const lineBottom: Partial<ExcelJS.Borders> = {
+    bottom: { style: 'thin', color: { argb: 'FF475569' } }
+  };
+
+  // Tambahkan semua baris
   grid.forEach((rowValues) => {
     worksheet.addRow(rowValues);
   });
+
+  // Helper untuk styling sel
+  const styleBox = (rowNum: number, colNum: number) => {
+    const cell = worksheet.getCell(rowNum, colNum);
+    cell.border = thinBox;
+    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+    cell.font = { name: 'Arial', size: 9, bold: true };
+  };
+
+  const styleBottom = (rowNum: number, colNum: number, span = 15) => {
+    for (let c = colNum; c < colNum + span; c++) {
+      const cell = worksheet.getCell(rowNum, c);
+      cell.border = lineBottom;
+    }
+  };
+
+  const styleHeader = (rowNum: number) => {
+    const cell = worksheet.getCell(rowNum, 1);
+    cell.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FF0F172A' } };
+    for (let c = 1; c <= 43; c++) {
+      const curCell = worksheet.getCell(rowNum, c);
+      curCell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE2E8F0' }
+      };
+      curCell.border = {
+        top: { style: 'thin', color: { argb: 'FF94A3B8' } },
+        bottom: { style: 'thin', color: { argb: 'FF94A3B8' } }
+      };
+    }
+  };
+
+  // 1. Kotak F-PD di Row 1
+  const fpdCell = worksheet.getCell(1, 40);
+  fpdCell.border = thinBox;
+  fpdCell.font = { name: 'Arial', size: 12, bold: true };
+  fpdCell.alignment = { horizontal: 'center', vertical: 'middle' };
+
+  // 2. Kotak Tanggal & REG di Row 3
+  [5, 8, 11].forEach(col => styleBox(3, col));
+  for (let c = 34; c <= 43; c++) styleBox(3, c);
+
+  // 3. Kotak Tingkat di Row 5
+  styleBox(5, 12);
+  styleBox(5, 13);
+  styleBottom(5, 20, 10);
+
+  // 4. Section Headers
+  [7, 59, 68, 80, 90, 108, 116].forEach(rowNum => styleHeader(rowNum));
+
+  // 5. Garis Bawah Isian Data Utama
+  [9, 11, 15, 17, 19, 20, 21, 24, 26, 28, 34, 36, 38, 40, 42, 44, 46, 48, 50, 52, 53, 54, 56, 57, 58].forEach(rowNum => {
+    styleBottom(rowNum, 12, 16);
+  });
+
+  // 6. Kotak Digit NISN (10 digit) & NIS (9 digit) di Row 13
+  for (let c = 12; c <= 21; c++) styleBox(13, c);
+  for (let c = 28; c <= 36; c++) styleBox(13, c);
+
+  // 7. Kotak Tanggal Lahir di Row 22
+  [33, 34, 36, 37, 39, 40, 41, 42].forEach(col => styleBox(22, col));
+
+  // 8. RT / RW di Row 30 & Kode Pos di Row 32
+  styleBox(30, 35);
+  styleBox(30, 39);
+  styleBox(32, 37);
+
+  // 9. Data Orang Tua Garis & Kotak
+  [60, 61, 63, 64, 66, 70, 72, 74, 76, 78, 82, 84, 86, 88].forEach(rowNum => {
+    styleBottom(rowNum, 12, 16);
+  });
+  styleBox(60, 40); // Thn Lahir Ayah
+  for (let c = 40; c <= 43; c++) styleBox(70, c); // Thn Lahir Ibu
+  styleBox(82, 40); // Thn Lahir Wali
+
+  // 10. Data Periodik Kotak Digit
+  // Tinggi Badan (Row 92: cols 14, 15, 16)
+  styleBox(92, 14); styleBox(92, 15); styleBox(92, 16);
+  // Berat Badan (Row 92: cols 29, 30)
+  styleBox(92, 29); styleBox(92, 30);
+  // Jarak (Row 94: col 14 & cols 32, 33)
+  styleBox(94, 14); styleBox(94, 32); styleBox(94, 33);
+  // Waktu tempuh (Row 96: col 14 & cols 35, 36)
+  styleBox(96, 14); styleBox(96, 35); styleBox(96, 36);
+  // Saudara & Anak Ke- (Row 98, 100: col 14)
+  styleBox(98, 14); styleBox(100, 14);
+
+  // 11. Garis Tabel Prestasi (Rows 110-114)
+  for (let r = 110; r <= 114; r++) {
+    for (let c = 1; c <= 43; c++) {
+      const cell = worksheet.getCell(r, c);
+      cell.border = thinBox;
+    }
+  }
+
+  // 12. Garis Tabel Beasiswa / Bantuan (Rows 117-121)
+  for (let r = 117; r <= 121; r++) {
+    for (let c = 1; c <= 43; c++) {
+      const cell = worksheet.getCell(r, c);
+      cell.border = thinBox;
+    }
+  }
 }
 
 export function gridToCsv(grid: string[][]): string {
