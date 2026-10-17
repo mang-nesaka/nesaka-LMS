@@ -16,6 +16,7 @@ interface UserInfo {
   name: string;
   email: string;
   role: string;
+  avatarUrl?: string | null;
 }
 
 interface DashboardShellProps {
@@ -157,8 +158,12 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
               className="px-4 py-3 mx-3 my-3 bg-slate-50 hover:bg-slate-100/90 rounded-2xl border border-slate-100 flex items-center gap-3 transition-colors group"
               title="Buka Profil & Kartu Siswa"
             >
-              <div className={`w-10 h-10 rounded-xl bg-gradient-to-tr ${roleDetails.avatarGrad} flex items-center justify-center text-white font-bold text-sm shadow-sm shrink-0 group-hover:scale-105 transition-transform`}>
-                {initial}
+              <div className={`w-10 h-10 rounded-xl bg-gradient-to-tr ${roleDetails.avatarGrad} flex items-center justify-center text-white font-bold text-sm shadow-sm shrink-0 overflow-hidden group-hover:scale-105 transition-transform`}>
+                {user.avatarUrl ? (
+                  <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                ) : (
+                  initial
+                )}
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-bold text-slate-800 truncate group-hover:text-indigo-600 transition-colors">
@@ -246,8 +251,12 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
               </span>
               <span className="text-xs text-slate-400">{user.email}</span>
             </div>
-            <div className={`h-9 w-9 rounded-xl bg-gradient-to-tr ${roleDetails.avatarGrad} flex items-center justify-center text-white font-bold shadow-sm group-hover:scale-105 transition-transform`}>
-              {initial}
+            <div className={`h-9 w-9 rounded-xl bg-gradient-to-tr ${roleDetails.avatarGrad} flex items-center justify-center text-white font-bold shadow-sm overflow-hidden group-hover:scale-105 transition-transform`}>
+              {user.avatarUrl ? (
+                <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+              ) : (
+                initial
+              )}
             </div>
           </Link>
         </header>

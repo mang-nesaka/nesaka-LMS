@@ -3,17 +3,19 @@
 import { useState, useEffect, useRef } from 'react';
 import QRCode from 'qrcode';
 import { 
-  Printer, Download, RotateCw, ShieldCheck, CheckCircle2, 
-  Sparkles, School, GraduationCap, Calendar, MapPin, 
-  User, Award, FileSpreadsheet, ArrowRight, ExternalLink
+  Printer, RotateCw, CheckCircle2, School, GraduationCap, 
+  User, FileSpreadsheet, ArrowRight, ExternalLink, Camera, 
+  Upload, Trash2, Loader2, Sparkles, Image as ImageIcon
 } from 'lucide-react';
 import Link from 'next/link';
+import { updateProfilePhoto, deleteProfilePhoto } from '@/app/actions/profile';
 
 interface StudentCardData {
   id: string;
   name: string;
   email: string;
   role: string;
+  avatarUrl?: string | null;
   createdAt: string;
   dapodik: {
     namaLengkap: string;
@@ -38,6 +40,11 @@ interface StudentCardData {
 export default function DigitalStudentCard({ data }: { data: StudentCardData }) {
   const [activeSide, setActiveSide] = useState<'front' | 'back'>('front');
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
+  const [currentAvatar, setCurrentAvatar] = useState<string | null>(data.avatarUrl || null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadMessage, setUploadMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isStudent = data.role === 'STUDENT';
   const isTeacher = data.role === 'TEACHER';
@@ -48,7 +55,6 @@ export default function DigitalStudentCard({ data }: { data: StudentCardData }) 
   const nis = data.dapodik?.nis || `242510${data.id.replace(/\D/g, '').padEnd(3, '1').slice(0, 3)}`;
   const gender = data.dapodik?.jenisKelamin || 'Laki-Laki';
   const ttl = data.dapodik ? `${data.dapodik.tempatLahir}, ${data.dapodik.tanggalLahir}` : 'Purwakarta, 15 Mei 2008';
-  const address = data.dapodik?.alamat || 'Jl. Raya Purwakarta No. 128, Jawa Barat';
   const initial = fullName.charAt(0).toUpperCase();
 
   // Generate QR Code verifikasi otentik
@@ -66,6 +72,82 @@ export default function DigitalStudentCard({ data }: { data: StudentCardData }) 
       .catch((err) => console.error('Gagal generate QR code:', err));
   }, [data.id, nisn, isStudent]);
 
+  // Fungsi Kompresi dan Optimasi Foto ke Canvas (400x500px, 85% JPEG)
+  const handlePhotoSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setUploadMessage({ type: 'error', text: 'File harus berupa foto gambar (JPG, PNG, atau WEBP).' });
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadMessage(null);
+
+    try {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = async () => {
+          // Buat Canvas rasio 4:5 pas foto resmi (400x500)
+          const canvas = document.createElement('canvas');
+          const targetWidth = 400;
+          const targetHeight = 500;
+          canvas.width = targetWidth;
+          canvas.height = targetHeight;
+          const ctx = canvas.getContext('2d');
+
+          if (!ctx) {
+            throw new Error('Gagal memproses gambar pada canvas.');
+          }
+
+          // Crop centering cover
+          const imgAspect = img.width / img.height;
+          const targetAspect = targetWidth / targetHeight;
+          let sx = 0, sy = 0, sWidth = img.width, sHeight = img.height;
+
+          if (imgAspect > targetAspect) {
+            sWidth = img.height * targetAspect;
+            sx = (img.width - sWidth) / 2;
+          } else {
+            sHeight = img.width / targetAspect;
+            sy = (img.height - sHeight) / 2;
+          }
+
+          ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, targetWidth, targetHeight);
+          const base64Image = canvas.toDataURL('image/jpeg', 0.85);
+
+          // Simpan via Server Action
+          await updateProfilePhoto(base64Image);
+          setCurrentAvatar(base64Image);
+          setUploadMessage({ type: 'success', text: 'Pas foto profil berhasil diperbarui!' });
+          setIsUploading(false);
+        };
+        img.src = event.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    } catch (err: any) {
+      setUploadMessage({ type: 'error', text: err.message || 'Gagal mengunggah foto profil.' });
+      setIsUploading(false);
+    }
+  };
+
+  // Fungsi Hapus Foto
+  const handleDeletePhoto = async () => {
+    if (!confirm('Apakah Anda yakin ingin menghapus foto profil ini?')) return;
+    setIsUploading(true);
+    try {
+      await deleteProfilePhoto();
+      setCurrentAvatar(null);
+      setUploadMessage({ type: 'success', text: 'Foto profil telah dihapus.' });
+    } catch (err: any) {
+      setUploadMessage({ type: 'error', text: 'Gagal menghapus foto.' });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   // Fungsi Cetak Kartu Langsung
   const handlePrint = () => {
     window.print();
@@ -73,6 +155,15 @@ export default function DigitalStudentCard({ data }: { data: StudentCardData }) 
 
   return (
     <div className="space-y-8">
+      {/* Hidden File Input for Image Upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/png, image/jpeg, image/jpg, image/webp"
+        onChange={handlePhotoSelect}
+        className="hidden"
+      />
+
       {/* Action Header & Card Flip Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -81,11 +172,26 @@ export default function DigitalStudentCard({ data }: { data: StudentCardData }) 
             {isStudent ? 'Kartu Siswa Digital' : 'Kartu Pendidik Digital'}
           </h2>
           <p className="text-slate-500 text-sm mt-0.5">
-            Tanda pengenal resmi digital terverifikasi dengan barcode & QR Code autentik.
+            Tanda pengenal resmi digital terverifikasi dengan pas foto, barcode & QR Code autentik.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 print:hidden">
+        <div className="flex flex-wrap items-center gap-2.5 print:hidden">
+          {/* Tombol Unggah Pas Foto */}
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-xl text-xs border border-indigo-200 transition-colors shadow-sm disabled:opacity-60"
+          >
+            {isUploading ? (
+              <Loader2 className="w-4 h-4 animate-spin text-indigo-600" />
+            ) : (
+              <Camera className="w-4 h-4 text-indigo-600" />
+            )}
+            <span>{currentAvatar ? 'Ganti Pas Foto' : 'Unggah Pas Foto'}</span>
+          </button>
+
+          {/* Tombol Flip Kartu */}
           <button
             onClick={() => setActiveSide(activeSide === 'front' ? 'back' : 'front')}
             className="flex items-center gap-1.5 px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 font-semibold rounded-xl text-xs border border-slate-200 transition-colors shadow-sm"
@@ -94,6 +200,7 @@ export default function DigitalStudentCard({ data }: { data: StudentCardData }) 
             <span>Lihat Sisi {activeSide === 'front' ? 'Belakang' : 'Depan'}</span>
           </button>
 
+          {/* Tombol Cetak Kartu */}
           <button
             onClick={handlePrint}
             className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl text-xs transition-colors shadow-md shadow-indigo-200"
@@ -103,6 +210,23 @@ export default function DigitalStudentCard({ data }: { data: StudentCardData }) 
           </button>
         </div>
       </div>
+
+      {/* Alert Notifikasi Upload */}
+      {uploadMessage && (
+        <div className={`p-4 rounded-2xl text-xs font-semibold flex items-center justify-between border ${
+          uploadMessage.type === 'success' 
+            ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
+            : 'bg-rose-50 text-rose-800 border-rose-200'
+        }`}>
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4" />
+            <span>{uploadMessage.text}</span>
+          </div>
+          <button onClick={() => setUploadMessage(null)} className="text-xs underline font-bold">
+            Tutup
+          </button>
+        </div>
+      )}
 
       {/* ======================================================== */}
       {/* TAMPILAN KARTU SISWA DIGITAL (STANDAR CR-80 RATIO)      */}
@@ -148,19 +272,37 @@ export default function DigitalStudentCard({ data }: { data: StudentCardData }) 
 
               {/* Badan Kartu: Foto & Biodata */}
               <div className="relative z-10 grid grid-cols-12 gap-3.5 my-auto py-2.5 items-center">
-                {/* Foto Siswa */}
+                {/* Foto Siswa (Bisa di-klik untuk ganti foto) */}
                 <div className="col-span-4 flex flex-col items-center">
-                  <div className="w-20 h-24 sm:w-24 sm:h-28 rounded-2xl bg-gradient-to-tr from-blue-700 to-indigo-500 border-2 border-white/80 p-0.5 shadow-lg flex flex-col items-center justify-center text-center overflow-hidden relative">
-                    {/* Background pas foto merah/biru resmi */}
-                    <div className="w-full h-full bg-blue-600 flex flex-col items-center justify-center text-white">
-                      <span className="text-2xl sm:text-3xl font-black">{initial}</span>
-                      <span className="text-[8px] font-bold tracking-tight uppercase opacity-90 mt-0.5">
-                        {isStudent ? 'Siswa Aktif' : 'Guru'}
-                      </span>
+                  <div 
+                    onClick={() => fileInputRef.current?.click()}
+                    title="Klik untuk mengganti pas foto"
+                    className="w-20 h-24 sm:w-24 sm:h-28 rounded-2xl bg-gradient-to-tr from-blue-700 to-indigo-500 border-2 border-white/80 p-0.5 shadow-lg flex flex-col items-center justify-center text-center overflow-hidden relative cursor-pointer group"
+                  >
+                    {currentAvatar ? (
+                      <img 
+                        src={currentAvatar} 
+                        alt={fullName} 
+                        className="w-full h-full object-cover rounded-xl"
+                      />
+                    ) : (
+                      /* Background pas foto merah/biru resmi jika belum ada foto */
+                      <div className="w-full h-full bg-blue-600 flex flex-col items-center justify-center text-white">
+                        <span className="text-2xl sm:text-3xl font-black">{initial}</span>
+                        <span className="text-[8px] font-bold tracking-tight uppercase opacity-90 mt-0.5">
+                          {isStudent ? 'Siswa Aktif' : 'Guru'}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Overlay Ganti Foto saat Hover */}
+                    <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity print:hidden">
+                      <Camera className="w-5 h-5 mb-1" />
+                      <span className="text-[8px] font-bold uppercase tracking-tight">Ganti Foto</span>
                     </div>
 
                     {/* Badge Verifikasi Hologram di Bawah Foto */}
-                    <div className="absolute bottom-0 inset-x-0 bg-yellow-400 text-slate-950 font-black text-[7px] py-0.5 uppercase tracking-tighter text-center">
+                    <div className="absolute bottom-0 inset-x-0 bg-yellow-400 text-slate-950 font-black text-[7px] py-0.5 uppercase tracking-tighter text-center shadow-xs">
                       VERIFIED
                     </div>
                   </div>
@@ -301,11 +443,48 @@ export default function DigitalStudentCard({ data }: { data: StudentCardData }) 
       {/* RINCIAN PROFIL LENGKAP & INTEGRASI DAPODIK               */}
       {/* ======================================================== */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-2">
-        {/* Kolom Informasi Akun */}
-        <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
+        {/* Kolom Informasi Akun & Pengelola Foto */}
+        <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-5">
           <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
             <User className="w-5 h-5 text-indigo-600" />
-            <h3 className="text-base font-bold text-slate-800">Informasi Akun LMS</h3>
+            <h3 className="text-base font-bold text-slate-800">Foto & Informasi Akun</h3>
+          </div>
+
+          {/* Pengelola Pas Foto Profil */}
+          <div className="flex items-center gap-4 p-3.5 bg-slate-50 rounded-2xl border border-slate-100">
+            <div className="w-16 h-16 rounded-2xl bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-xl overflow-hidden shadow-inner shrink-0 border border-indigo-200">
+              {currentAvatar ? (
+                <img src={currentAvatar} alt={data.name} className="w-full h-full object-cover" />
+              ) : (
+                initial
+              )}
+            </div>
+
+            <div className="space-y-1.5 flex-1 min-w-0">
+              <p className="text-xs font-bold text-slate-800">Pas Foto Profil</p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploading}
+                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  Upload Foto
+                </button>
+
+                {currentAvatar && (
+                  <button
+                    onClick={handleDeletePhoto}
+                    disabled={isUploading}
+                    className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors"
+                    title="Hapus foto profil"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              <p className="text-[10px] text-slate-400">Format: JPG/PNG, maks 5MB.</p>
+            </div>
           </div>
 
           <div className="space-y-3 text-sm">

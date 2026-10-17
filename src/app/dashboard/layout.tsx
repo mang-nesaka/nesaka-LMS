@@ -22,6 +22,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       name: true,
       email: true,
       role: true,
+      avatarUrl: true,
     },
   });
 

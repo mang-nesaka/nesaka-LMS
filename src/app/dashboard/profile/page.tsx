@@ -64,6 +64,7 @@ export default async function ProfilePage() {
     name: user.name,
     email: user.email,
     role: user.role,
+    avatarUrl: user.avatarUrl,
     createdAt: user.createdAt.toISOString(),
     dapodik: user.dapodikForm
       ? {
