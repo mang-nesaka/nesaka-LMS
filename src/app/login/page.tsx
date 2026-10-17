@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { 
   Mail, Lock, ArrowLeft, LogIn, AlertCircle, 
-  Users, BookOpen, School, Sparkles, CheckCircle2 
+  Users, BookOpen, School 
 } from 'lucide-react';
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -25,35 +25,14 @@ function LoginForm() {
   useEffect(() => {
     if (initialPortal === 'guru' || initialPortal === 'admin' || initialPortal === 'siswa') {
       setActivePortal(initialPortal);
-      if (initialPortal === 'siswa') {
-        setEmail('siswa@sekolah.com');
-        setPassword('password123');
-      } else if (initialPortal === 'guru') {
-        setEmail('guru@sekolah.com');
-        setPassword('password123');
-      } else {
-        setEmail('tu@sekolah.com');
-        setPassword('password123');
-      }
-    } else {
-      setEmail('siswa@sekolah.com');
-      setPassword('password123');
     }
   }, [initialPortal]);
 
   const selectPortal = (portal: PortalType) => {
     setActivePortal(portal);
     setError(null);
-    if (portal === 'siswa') {
-      setEmail('siswa@sekolah.com');
-      setPassword('password123');
-    } else if (portal === 'guru') {
-      setEmail('guru@sekolah.com');
-      setPassword('password123');
-    } else {
-      setEmail('tu@sekolah.com');
-      setPassword('password123');
-    }
+    setEmail('');
+    setPassword('');
   };
 
   async function handleSubmit(formData: FormData) {
@@ -74,8 +53,6 @@ function LoginForm() {
       desc: 'Masuk untuk mengakses materi kelas, tugas harian, dan ujian CBT.',
       themeColor: 'from-blue-600 to-indigo-600',
       activeTab: 'bg-indigo-600 text-white shadow-md shadow-indigo-200',
-      demoEmail: 'siswa@sekolah.com',
-      demoLabel: 'Gunakan Akun Siswa Demo (siswa@sekolah.com)',
     },
     guru: {
       title: 'Portal Guru & Pengajar',
@@ -83,8 +60,6 @@ function LoginForm() {
       desc: 'Masuk untuk membuat kelas, membagikan link rombel, dan upload soal CBT.',
       themeColor: 'from-purple-600 to-indigo-600',
       activeTab: 'bg-purple-600 text-white shadow-md shadow-purple-200',
-      demoEmail: 'guru@sekolah.com',
-      demoLabel: 'Gunakan Akun Guru Demo (guru@sekolah.com)',
     },
     admin: {
       title: 'Portal TU & Admin',
@@ -92,8 +67,6 @@ function LoginForm() {
       desc: 'Masuk untuk rekapitulasi data Dapodik dan manajemen sistem sekolah.',
       themeColor: 'from-slate-700 to-slate-900',
       activeTab: 'bg-slate-800 text-white shadow-md',
-      demoEmail: 'tu@sekolah.com',
-      demoLabel: 'Gunakan Akun Staf TU (tu@sekolah.com)',
     },
   }[activePortal];
 
@@ -162,7 +135,7 @@ function LoginForm() {
         </div>
 
         {/* Header Portal Info */}
-        <div className="text-center mb-6">
+        <div className="text-center mb-7">
           <span className="inline-block px-3 py-1 bg-slate-100 text-slate-700 text-xs font-bold rounded-full mb-2 border border-slate-200">
             {portalConfig.badge}
           </span>
@@ -172,24 +145,6 @@ function LoginForm() {
           <p className="text-slate-500 text-xs sm:text-sm mt-1">
             {portalConfig.desc}
           </p>
-        </div>
-
-        {/* Demo Fast Autofill Helper */}
-        <div className="mb-6 p-3 bg-indigo-50/70 border border-indigo-100 rounded-2xl flex items-center justify-between text-xs">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-indigo-600 shrink-0" />
-            <span className="text-indigo-900 font-medium">Uji Coba Cepat:</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              setEmail(portalConfig.demoEmail);
-              setPassword('password123');
-            }}
-            className="font-bold text-indigo-700 hover:text-indigo-900 underline text-right"
-          >
-            Isi Otomatis Akun Demo
-          </button>
         </div>
 
         {/* Form Login */}
