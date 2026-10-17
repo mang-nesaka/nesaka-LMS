@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { 
   LayoutDashboard, BookOpen, Users, FileText, Settings, 
   LogOut, Menu, FileSpreadsheet, Laptop, GraduationCap, 
-  ShieldCheck, Award, Sparkles, UserCheck
+  IdCard, ChevronRight
 } from 'lucide-react';
 import { useState } from 'react';
 import { logout } from '@/app/actions/auth';
@@ -35,6 +35,7 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
         { name: 'Kelas Pembelajaran', href: '/dashboard/courses', icon: BookOpen },
         { name: 'Tugas Saya', href: '/dashboard/assignments', icon: FileText },
         { name: 'Ujian CBT', href: '/dashboard/exams', icon: Laptop },
+        { name: 'Profil & Kartu Siswa', href: '/dashboard/profile', icon: IdCard },
         { name: 'Formulir Dapodik', href: '/dashboard/dapodik', icon: FileSpreadsheet },
         { name: 'Pengaturan Akun', href: '/dashboard/settings', icon: Settings },
       ];
@@ -47,6 +48,7 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
         { name: 'Tugas & Penilaian', href: '/dashboard/assignments', icon: FileText },
         { name: 'Ujian CBT', href: '/dashboard/exams', icon: Laptop },
         { name: 'Data Siswa', href: '/dashboard/students', icon: Users },
+        { name: 'Profil & Kartu Guru', href: '/dashboard/profile', icon: IdCard },
         { name: 'Pengaturan Akun', href: '/dashboard/settings', icon: Settings },
       ];
     }
@@ -56,6 +58,7 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
         { name: 'Dashboard TU', href: '/dashboard', icon: LayoutDashboard },
         { name: 'Data Seluruh Siswa', href: '/dashboard/students', icon: Users },
         { name: 'Rekap Dapodik (F-PD)', href: '/dashboard/dapodik', icon: FileSpreadsheet },
+        { name: 'Profil Saya', href: '/dashboard/profile', icon: IdCard },
         { name: 'Pengaturan Akun', href: '/dashboard/settings', icon: Settings },
       ];
     }
@@ -68,6 +71,7 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
       { name: 'Ujian CBT', href: '/dashboard/exams', icon: Laptop },
       { name: 'Manajemen Siswa', href: '/dashboard/students', icon: Users },
       { name: 'Rekap Dapodik', href: '/dashboard/dapodik', icon: FileSpreadsheet },
+      { name: 'Profil Pengguna', href: '/dashboard/profile', icon: IdCard },
       { name: 'Pengaturan Sistem', href: '/dashboard/settings', icon: Settings },
     ];
   };
@@ -146,18 +150,26 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
               </div>
             </div>
 
-            {/* Profile Brief in Sidebar */}
-            <div className="px-5 py-4 mx-3 my-3 bg-slate-50/80 rounded-2xl border border-slate-100 flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-xl bg-gradient-to-tr ${roleDetails.avatarGrad} flex items-center justify-center text-white font-bold text-sm shadow-sm shrink-0`}>
+            {/* Profile Brief in Sidebar (Clickable Link to Profile) */}
+            <Link
+              href="/dashboard/profile"
+              onClick={() => setSidebarOpen(false)}
+              className="px-4 py-3 mx-3 my-3 bg-slate-50 hover:bg-slate-100/90 rounded-2xl border border-slate-100 flex items-center gap-3 transition-colors group"
+              title="Buka Profil & Kartu Siswa"
+            >
+              <div className={`w-10 h-10 rounded-xl bg-gradient-to-tr ${roleDetails.avatarGrad} flex items-center justify-center text-white font-bold text-sm shadow-sm shrink-0 group-hover:scale-105 transition-transform`}>
                 {initial}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold text-slate-800 truncate">{user.name}</p>
+                <p className="text-sm font-bold text-slate-800 truncate group-hover:text-indigo-600 transition-colors">
+                  {user.name}
+                </p>
                 <span className={`inline-block px-2 py-0.5 text-[10px] font-bold rounded-md border mt-0.5 ${roleDetails.badgeClass}`}>
                   {roleDetails.badgeText}
                 </span>
               </div>
-            </div>
+              <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 group-hover:translate-x-0.5 transition-all" />
+            </Link>
 
             {/* Navigasi Menu Sesuai Role */}
             <nav className="px-3 py-2 space-y-1.5 overflow-y-auto max-h-[calc(100vh-280px)]">
@@ -223,15 +235,21 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
             </div>
           </div>
           
-          <div className="flex items-center space-x-3">
+          <Link 
+            href="/dashboard/profile"
+            className="flex items-center space-x-3 p-1.5 rounded-xl hover:bg-slate-50 transition-colors group"
+            title="Lihat Profil & Kartu Digital"
+          >
             <div className="text-right hidden sm:block">
-              <span className="text-sm font-bold text-slate-800 block leading-tight">{user.name}</span>
+              <span className="text-sm font-bold text-slate-800 group-hover:text-indigo-600 transition-colors block leading-tight">
+                {user.name}
+              </span>
               <span className="text-xs text-slate-400">{user.email}</span>
             </div>
-            <div className={`h-9 w-9 rounded-xl bg-gradient-to-tr ${roleDetails.avatarGrad} flex items-center justify-center text-white font-bold shadow-sm`}>
+            <div className={`h-9 w-9 rounded-xl bg-gradient-to-tr ${roleDetails.avatarGrad} flex items-center justify-center text-white font-bold shadow-sm group-hover:scale-105 transition-transform`}>
               {initial}
             </div>
-          </div>
+          </Link>
         </header>
 
         {/* Page Content */}
