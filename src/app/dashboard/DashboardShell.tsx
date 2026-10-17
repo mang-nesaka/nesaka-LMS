@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { 
   LayoutDashboard, BookOpen, Users, FileText, Settings, 
   LogOut, Menu, FileSpreadsheet, Laptop, GraduationCap, 
-  IdCard, ChevronRight
+  IdCard, ChevronRight, FileUp, FileCheck
 } from 'lucide-react';
 import { useState } from 'react';
 import { logout } from '@/app/actions/auth';
@@ -37,6 +37,7 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
         { name: 'Tugas Saya', href: '/dashboard/assignments', icon: FileText },
         { name: 'Ujian CBT', href: '/dashboard/exams', icon: Laptop },
         { name: 'Profil & Kartu Siswa', href: '/dashboard/profile', icon: IdCard },
+        { name: 'Upload Berkas (Kelas 10)', href: '/dashboard/documents', icon: FileUp },
         { name: 'Formulir Dapodik', href: '/dashboard/dapodik', icon: FileSpreadsheet },
         { name: 'Pengaturan Akun', href: '/dashboard/settings', icon: Settings },
       ];
@@ -58,6 +59,7 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
       return [
         { name: 'Dashboard TU', href: '/dashboard', icon: LayoutDashboard },
         { name: 'Data Seluruh Siswa', href: '/dashboard/students', icon: Users },
+        { name: 'Verifikasi Dokumen Siswa', href: '/dashboard/documents', icon: FileCheck },
         { name: 'Rekap Dapodik (F-PD)', href: '/dashboard/dapodik', icon: FileSpreadsheet },
         { name: 'Profil Saya', href: '/dashboard/profile', icon: IdCard },
         { name: 'Pengaturan Akun', href: '/dashboard/settings', icon: Settings },
@@ -71,6 +73,7 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
       { name: 'Tugas Harian', href: '/dashboard/assignments', icon: FileText },
       { name: 'Ujian CBT', href: '/dashboard/exams', icon: Laptop },
       { name: 'Manajemen Siswa', href: '/dashboard/students', icon: Users },
+      { name: 'Verifikasi Dokumen Siswa', href: '/dashboard/documents', icon: FileCheck },
       { name: 'Rekap Dapodik', href: '/dashboard/dapodik', icon: FileSpreadsheet },
       { name: 'Profil Pengguna', href: '/dashboard/profile', icon: IdCard },
       { name: 'Pengaturan Sistem', href: '/dashboard/settings', icon: Settings },
