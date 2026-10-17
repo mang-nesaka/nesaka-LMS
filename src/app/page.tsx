@@ -83,7 +83,7 @@ export default function Home() {
               </div>
 
               <Link 
-                href="/login?portal=siswa" 
+                href="/login" 
                 className="flex items-center justify-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 px-6 rounded-2xl w-full transition-all duration-300 shadow-md shadow-indigo-200"
               >
                 <span>Masuk sebagai Siswa</span>
@@ -133,7 +133,7 @@ export default function Home() {
               </div>
 
               <Link 
-                href="/login?portal=guru" 
+                href="/login" 
                 className="flex items-center justify-center space-x-2 bg-purple-600 hover:bg-purple-700 text-white font-bold py-3.5 px-6 rounded-2xl w-full transition-all duration-300 shadow-md shadow-purple-200"
               >
                 <span>Masuk sebagai Guru</span>
@@ -150,7 +150,7 @@ export default function Home() {
               <span>Untuk Staf Tata Usaha (TU) dan Administrator Sekolah:</span>
             </div>
             <Link 
-              href="/login?portal=admin" 
+              href="/login" 
               className="font-bold text-slate-700 hover:text-indigo-600 underline flex items-center gap-1"
             >
               Masuk ke Portal Staf TU / Admin
