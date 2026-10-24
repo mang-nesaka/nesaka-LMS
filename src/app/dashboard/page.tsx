@@ -514,6 +514,186 @@ export default async function DashboardPage() {
   }
 
   // ==========================================
+  // TAMPILAN DASHBOARD KEPALA SEKOLAH (KEPSEK)
+  // ==========================================
+  if (currentUser.role === 'KEPSEK') {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const [realtimeAgendas, totalStudents, todayAttendances, examResults, recentReports] = await Promise.all([
+      prisma.teacherClassAgenda.findMany({
+        where: { date: todayStr },
+        include: {
+          classroom: true,
+          teacher: { select: { name: true, email: true } },
+        },
+        orderBy: { scanTime: 'desc' },
+      }),
+      prisma.user.count({ where: { role: 'STUDENT' } }),
+      prisma.studentAttendance.findMany({
+        where: { date: todayStr },
+      }),
+      prisma.examResult.findMany({
+        include: {
+          student: { select: { name: true, studentClass: true } },
+          exam: { select: { title: true } },
+        },
+        orderBy: { submittedAt: 'desc' },
+        take: 5,
+      }),
+      prisma.activityReport.findMany({
+        include: { author: { select: { name: true, role: true } } },
+        orderBy: { createdAt: 'desc' },
+        take: 4,
+      }),
+    ]);
+
+    const hadirCount = todayAttendances.filter((a) => a.checkInStatus === 'HADIR' || a.checkInStatus === 'TERLAMBAT').length;
+    const persentaseHadir = totalStudents > 0 ? Math.round((hadirCount / totalStudents) * 100) : 0;
+    const lateTeachers = realtimeAgendas.filter((a) => a.isLate);
+
+    return (
+      <div className="space-y-7">
+        <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-950 rounded-3xl p-6 sm:p-8 text-white shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <span className="inline-block px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-semibold uppercase tracking-wider text-indigo-200 mb-2">
+              Portal Pengawasan Kepala Sekolah
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+              Monitoring Kinerja & Pembelajaran Real-Time
+            </h2>
+            <p className="text-slate-300 text-xs sm:text-sm mt-1 max-w-2xl leading-relaxed">
+              Pengawasan terpadu aktivitas mengajar guru, keterlambatan masuk kelas, rekapitulasi kehadiran siswa sekolah, nilai ujian CBT, dan notulensi kegiatan seluruh Waka.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Link
+              href="/dashboard/monitoring"
+              className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-2"
+            >
+              <span>Lihat Radar Guru Real-Time</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </div>
+
+        {/* 4 Stat Cards Utama */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+          <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+            <p className="text-xs font-medium text-slate-400">Guru Mengajar Hari Ini</p>
+            <p className="text-2xl font-black text-slate-800 mt-1">{realtimeAgendas.length} Sesi</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              {lateTeachers.length > 0 ? (
+                <span className="text-rose-600 font-bold">{lateTeachers.length} guru terlambat</span>
+              ) : (
+                <span className="text-emerald-600 font-bold">Semua tepat waktu</span>
+              )}
+            </p>
+          </div>
+
+          <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+            <p className="text-xs font-medium text-slate-400">Presensi Siswa Hari Ini</p>
+            <p className="text-2xl font-black text-indigo-600 mt-1">{persentaseHadir}%</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">{hadirCount} dari {totalStudents} siswa hadir</p>
+          </div>
+
+          <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+            <p className="text-xs font-medium text-slate-400">Ujian CBT Dikerjakan</p>
+            <p className="text-2xl font-black text-purple-600 mt-1">{examResults.length} Riwayat</p>
+            <Link href="/dashboard/exams/recap" className="text-[11px] text-purple-700 font-bold hover:underline">
+              Buka Rekap Nilai &rarr;
+            </Link>
+          </div>
+
+          <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+            <p className="text-xs font-medium text-slate-400">Berita Acara Waka</p>
+            <p className="text-2xl font-black text-orange-600 mt-1">{recentReports.length} Laporan</p>
+            <Link href="/dashboard/berita-acara" className="text-[11px] text-orange-700 font-bold hover:underline">
+              Buka Notulensi &rarr;
+            </Link>
+          </div>
+        </div>
+
+        {/* 2 Kolom: Aktivitas Guru Mengajar Saat Ini & Hasil Ujian CBT Siswa */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Kolom Kiri: Radar Guru Mengajar Real-Time */}
+          <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
+            <div className="flex justify-between items-center border-b pb-3">
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <span>📍 Guru Mengajar di Kelas Saat Ini</span>
+              </h3>
+              <Link href="/dashboard/monitoring" className="text-xs font-bold text-indigo-600 hover:text-indigo-800">
+                Lihat Semua &rarr;
+              </Link>
+            </div>
+
+            {realtimeAgendas.length > 0 ? (
+              <div className="space-y-3">
+                {realtimeAgendas.slice(0, 4).map((ag) => (
+                  <div key={ag.id} className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-xs text-slate-900">{ag.teacher?.name}</span>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${ag.isLate ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
+                        {ag.isLate ? `Terlambat ${ag.lateMinutes}m` : 'Tepat Waktu'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[11px] text-slate-600">
+                      <span className="font-semibold text-indigo-700">{ag.classroom?.name}</span>
+                      <span>•</span>
+                      <span>{ag.subject}</span>
+                      <span>•</span>
+                      <span>{ag.scheduledStartTime} - {ag.scheduledEndTime} WIB</span>
+                    </div>
+                    <p className="text-[11px] text-slate-600 bg-white p-2 rounded-xl border border-slate-200/60 line-clamp-2">
+                      Materi: {ag.teachingMaterial}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-8 text-center text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                <p className="text-xs">Belum ada guru yang menscan barcode kelas hari ini.</p>
+              </div>
+            )}
+          </div>
+
+          {/* Kolom Kanan: Hasil CBT & Nilai Terbaru Siswa */}
+          <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
+            <div className="flex justify-between items-center border-b pb-3">
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <span>🏆 Pengerjaan Ujian CBT Terbaru</span>
+              </h3>
+              <Link href="/dashboard/exams/recap" className="text-xs font-bold text-indigo-600 hover:text-indigo-800">
+                Rekap Nilai Lengkap &rarr;
+              </Link>
+            </div>
+
+            {examResults.length > 0 ? (
+              <div className="space-y-3">
+                {examResults.map((ex) => (
+                  <div key={ex.id} className="p-3 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
+                    <div>
+                      <span className="font-bold text-xs text-slate-900 block">{ex.student?.name}</span>
+                      <span className="text-[11px] text-slate-500">{ex.student?.studentClass || 'Siswa'} • {ex.exam?.title}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-black ${ex.score >= 75 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`}>
+                        {ex.score}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-8 text-center text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                <p className="text-xs">Belum ada riwayat ujian CBT yang diserahkan.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ==========================================
   // TAMPILAN DASHBOARD TATA USAHA (TU) & ADMIN
   // ==========================================
   const [totalStudents, totalCourses, dapodikCount, totalExams] = await Promise.all([

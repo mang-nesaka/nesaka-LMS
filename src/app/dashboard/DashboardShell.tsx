@@ -6,7 +6,8 @@ import { motion } from 'framer-motion';
 import { 
   LayoutDashboard, BookOpen, Users, FileText, Settings, 
   LogOut, Menu, FileSpreadsheet, Laptop, GraduationCap, 
-  IdCard, ChevronRight, FileUp, FileCheck
+  IdCard, ChevronRight, FileUp, FileCheck, Camera, QrCode, 
+  School, BarChart3, Radio, FileSignature, AlertCircle, MapPin
 } from 'lucide-react';
 import { useState } from 'react';
 import { logout } from '@/app/actions/auth';
@@ -33,6 +34,7 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
     if (user.role === 'STUDENT') {
       return [
         { name: 'Dashboard Siswa', href: '/dashboard', icon: LayoutDashboard },
+        { name: 'Presensi GPS & Selfie', href: '/dashboard/attendance', icon: Camera },
         { name: 'Kelas Pembelajaran', href: '/dashboard/courses', icon: BookOpen },
         { name: 'Tugas Saya', href: '/dashboard/assignments', icon: FileText },
         { name: 'Ujian CBT', href: '/dashboard/exams', icon: Laptop },
@@ -46,11 +48,26 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
     if (user.role === 'TEACHER') {
       return [
         { name: 'Dashboard Guru', href: '/dashboard', icon: LayoutDashboard },
+        { name: 'Scan Barcode & Agenda', href: '/dashboard/teacher-agenda', icon: QrCode },
         { name: 'Kelola Kelas', href: '/dashboard/courses', icon: BookOpen },
         { name: 'Tugas & Penilaian', href: '/dashboard/assignments', icon: FileText },
         { name: 'Ujian CBT', href: '/dashboard/exams', icon: Laptop },
-        { name: 'Data Siswa', href: '/dashboard/students', icon: Users },
+        { name: 'Barcode Ruang Kelas', href: '/dashboard/classrooms', icon: School },
         { name: 'Profil & Kartu Guru', href: '/dashboard/profile', icon: IdCard },
+        { name: 'Pengaturan Akun', href: '/dashboard/settings', icon: Settings },
+      ];
+    }
+
+    if (user.role === 'WALI_KELAS') {
+      return [
+        { name: 'Dashboard Wali Kelas', href: '/dashboard', icon: LayoutDashboard },
+        { name: 'Rekap Kehadiran Siswa', href: '/dashboard/walikelas', icon: BarChart3 },
+        { name: 'Scan Barcode & Agenda', href: '/dashboard/teacher-agenda', icon: QrCode },
+        { name: 'Kelas Pembelajaran', href: '/dashboard/courses', icon: BookOpen },
+        { name: 'Tugas & Penilaian', href: '/dashboard/assignments', icon: FileText },
+        { name: 'Ujian CBT', href: '/dashboard/exams', icon: Laptop },
+        { name: 'Barcode Ruang Kelas', href: '/dashboard/classrooms', icon: School },
+        { name: 'Profil Saya', href: '/dashboard/profile', icon: IdCard },
         { name: 'Pengaturan Akun', href: '/dashboard/settings', icon: Settings },
       ];
     }
@@ -61,20 +78,87 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
         { name: 'Data Seluruh Siswa', href: '/dashboard/students', icon: Users },
         { name: 'Verifikasi Dokumen Siswa', href: '/dashboard/documents', icon: FileCheck },
         { name: 'Rekap Dapodik (F-PD)', href: '/dashboard/dapodik', icon: FileSpreadsheet },
+        { name: 'Koreksi Data Diri Siswa', href: '/dashboard/tu/corrections', icon: AlertCircle },
+        { name: 'Cetak Barcode Ruang Kelas', href: '/dashboard/classrooms', icon: QrCode },
+        { name: 'Pengaturan GPS & Jam Sekolah', href: '/dashboard/settings/school', icon: MapPin },
         { name: 'Profil Saya', href: '/dashboard/profile', icon: IdCard },
         { name: 'Pengaturan Akun', href: '/dashboard/settings', icon: Settings },
       ];
     }
 
-    // Default untuk ADMIN
+    if (user.role === 'WAKA_KURIKULUM') {
+      return [
+        { name: 'Dashboard Kurikulum', href: '/dashboard', icon: LayoutDashboard },
+        { name: 'Monitoring Guru Real-Time', href: '/dashboard/monitoring', icon: Radio },
+        { name: 'Rekap Kehadiran Siswa', href: '/dashboard/walikelas', icon: BarChart3 },
+        { name: 'Rekap Nilai Ujian CBT', href: '/dashboard/exams/recap', icon: Laptop },
+        { name: 'Berita Acara Kurikulum', href: '/dashboard/berita-acara?role=WAKA_KURIKULUM', icon: FileSignature },
+        { name: 'Barcode Ruang Kelas', href: '/dashboard/classrooms', icon: QrCode },
+        { name: 'Profil Saya', href: '/dashboard/profile', icon: IdCard },
+        { name: 'Pengaturan Akun', href: '/dashboard/settings', icon: Settings },
+      ];
+    }
+
+    if (user.role === 'WAKA_KESISWAAN') {
+      return [
+        { name: 'Dashboard Kesiswaan', href: '/dashboard', icon: LayoutDashboard },
+        { name: 'Rekap Kehadiran Seluruh Siswa', href: '/dashboard/walikelas', icon: BarChart3 },
+        { name: 'Berita Acara Kesiswaan', href: '/dashboard/berita-acara?role=WAKA_KESISWAAN', icon: FileSignature },
+        { name: 'Profil Saya', href: '/dashboard/profile', icon: IdCard },
+        { name: 'Pengaturan Akun', href: '/dashboard/settings', icon: Settings },
+      ];
+    }
+
+    if (user.role === 'WAKA_SARPRAS') {
+      return [
+        { name: 'Dashboard Sarpras', href: '/dashboard', icon: LayoutDashboard },
+        { name: 'Barcode Ruang Kelas', href: '/dashboard/classrooms', icon: QrCode },
+        { name: 'Berita Acara Sarpras', href: '/dashboard/berita-acara?role=WAKA_SARPRAS', icon: FileSignature },
+        { name: 'Profil Saya', href: '/dashboard/profile', icon: IdCard },
+        { name: 'Pengaturan Akun', href: '/dashboard/settings', icon: Settings },
+      ];
+    }
+
+    if (user.role === 'WAKA_HUBDIN') {
+      return [
+        { name: 'Dashboard Hubdin', href: '/dashboard', icon: LayoutDashboard },
+        { name: 'Berita Acara Hubungan Industri', href: '/dashboard/berita-acara?role=WAKA_HUBDIN', icon: FileSignature },
+        { name: 'Profil Saya', href: '/dashboard/profile', icon: IdCard },
+        { name: 'Pengaturan Akun', href: '/dashboard/settings', icon: Settings },
+      ];
+    }
+
+    if (user.role === 'KEPSEK') {
+      return [
+        { name: 'Dashboard Kepala Sekolah', href: '/dashboard', icon: LayoutDashboard },
+        { name: 'Monitoring Guru Real-Time', href: '/dashboard/monitoring', icon: Radio },
+        { name: 'Rekap Presensi Siswa', href: '/dashboard/walikelas', icon: BarChart3 },
+        { name: 'Rekap Nilai Ujian CBT', href: '/dashboard/exams/recap', icon: Laptop },
+        { name: 'Berita Acara Seluruh Waka', href: '/dashboard/berita-acara', icon: FileSignature },
+        { name: 'Barcode Ruang Kelas', href: '/dashboard/classrooms', icon: QrCode },
+        { name: 'Profil Pengawas', href: '/dashboard/profile', icon: IdCard },
+        { name: 'Pengaturan Akun', href: '/dashboard/settings', icon: Settings },
+      ];
+    }
+
+    // Default untuk ADMIN (Super Administrator)
     return [
       { name: 'Dashboard Utama', href: '/dashboard', icon: LayoutDashboard },
+      { name: 'Monitoring Guru Real-Time', href: '/dashboard/monitoring', icon: Radio },
+      { name: 'Presensi GPS Siswa', href: '/dashboard/attendance', icon: Camera },
+      { name: 'Rekap Presensi Siswa', href: '/dashboard/walikelas', icon: BarChart3 },
+      { name: 'Scan Agenda Mengajar', href: '/dashboard/teacher-agenda', icon: QrCode },
       { name: 'Semua Kelas', href: '/dashboard/courses', icon: BookOpen },
       { name: 'Tugas Harian', href: '/dashboard/assignments', icon: FileText },
       { name: 'Ujian CBT', href: '/dashboard/exams', icon: Laptop },
-      { name: 'Manajemen Siswa', href: '/dashboard/students', icon: Users },
-      { name: 'Verifikasi Dokumen Siswa', href: '/dashboard/documents', icon: FileCheck },
-      { name: 'Rekap Dapodik', href: '/dashboard/dapodik', icon: FileSpreadsheet },
+      { name: 'Rekap Nilai CBT', href: '/dashboard/exams/recap', icon: Laptop },
+      { name: 'Berita Acara Kegiatan', href: '/dashboard/berita-acara', icon: FileSignature },
+      { name: 'Barcode Ruang Kelas', href: '/dashboard/classrooms', icon: QrCode },
+      { name: 'Manajemen Siswa (TU)', href: '/dashboard/students', icon: Users },
+      { name: 'Verifikasi Dokumen (TU)', href: '/dashboard/documents', icon: FileCheck },
+      { name: 'Koreksi Data Diri (TU)', href: '/dashboard/tu/corrections', icon: AlertCircle },
+      { name: 'Rekap Dapodik (TU)', href: '/dashboard/dapodik', icon: FileSpreadsheet },
+      { name: 'Pengaturan GPS Sekolah (TU)', href: '/dashboard/settings/school', icon: MapPin },
       { name: 'Profil Pengguna', href: '/dashboard/profile', icon: IdCard },
       { name: 'Pengaturan Sistem', href: '/dashboard/settings', icon: Settings },
     ];
@@ -99,6 +183,13 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
           badgeClass: 'bg-purple-50 text-purple-700 border-purple-200',
           avatarGrad: 'from-purple-500 to-indigo-600',
         };
+      case 'WALI_KELAS':
+        return {
+          portalTitle: 'Portal Wali Kelas',
+          badgeText: 'Wali Kelas',
+          badgeClass: 'bg-blue-50 text-blue-700 border-blue-200',
+          avatarGrad: 'from-blue-600 to-cyan-600',
+        };
       case 'TU':
         return {
           portalTitle: 'Portal Tata Usaha (TU)',
@@ -106,11 +197,46 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
           badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200',
           avatarGrad: 'from-emerald-500 to-teal-600',
         };
+      case 'WAKA_KURIKULUM':
+        return {
+          portalTitle: 'Portal Waka Kurikulum',
+          badgeText: 'Waka Kurikulum',
+          badgeClass: 'bg-indigo-50 text-indigo-800 border-indigo-200',
+          avatarGrad: 'from-indigo-600 to-blue-700',
+        };
+      case 'WAKA_KESISWAAN':
+        return {
+          portalTitle: 'Portal Waka Kesiswaan',
+          badgeText: 'Waka Kesiswaan',
+          badgeClass: 'bg-teal-50 text-teal-800 border-teal-200',
+          avatarGrad: 'from-teal-600 to-emerald-700',
+        };
+      case 'WAKA_SARPRAS':
+        return {
+          portalTitle: 'Portal Waka Sarana & Prasarana',
+          badgeText: 'Waka Sarpras',
+          badgeClass: 'bg-amber-50 text-amber-800 border-amber-200',
+          avatarGrad: 'from-amber-600 to-orange-700',
+        };
+      case 'WAKA_HUBDIN':
+        return {
+          portalTitle: 'Portal Waka Hubungan Industri',
+          badgeText: 'Waka Hubdin',
+          badgeClass: 'bg-violet-50 text-violet-800 border-violet-200',
+          avatarGrad: 'from-violet-600 to-purple-700',
+        };
+      case 'KEPSEK':
+        return {
+          portalTitle: 'Portal Pengawasan Kepala Sekolah',
+          badgeText: 'Kepala Sekolah',
+          badgeClass: 'bg-sky-50 text-sky-800 border-sky-200',
+          avatarGrad: 'from-sky-700 to-blue-900',
+        };
       case 'ADMIN':
       default:
         return {
           portalTitle: 'Portal Administrator',
-          badgeText: 'Admin',
+          badgeText: 'Super Admin',
           badgeClass: 'bg-rose-50 text-rose-700 border-rose-200',
           avatarGrad: 'from-rose-500 to-pink-600',
         };

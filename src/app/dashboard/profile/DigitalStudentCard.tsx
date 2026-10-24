@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { updateProfilePhoto, deleteProfilePhoto } from '@/app/actions/profile';
+import { submitDataCorrectionRequest } from '@/app/actions/correction';
 
 interface StudentCardData {
   id: string;
@@ -43,6 +44,13 @@ export default function DigitalStudentCard({ data }: { data: StudentCardData }) 
   const [currentAvatar, setCurrentAvatar] = useState<string | null>(data.avatarUrl || null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Verifikasi Data Diri Siswa
+  const [isDiscrepancyModalOpen, setIsDiscrepancyModalOpen] = useState(false);
+  const [discrepancyNotes, setDiscrepancyNotes] = useState('');
+  const [isSubmittingCorrection, setIsSubmittingCorrection] = useState(false);
+  const [correctionMsg, setCorrectionMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [dataConfirmed, setDataConfirmed] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -625,6 +633,121 @@ export default function DigitalStudentCard({ data }: { data: StudentCardData }) 
           )}
         </div>
       </div>
+
+      {/* Verifikasi Data Diri Siswa (Kesesuaian Data Dapodik) */}
+      {isStudent && (
+        <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200 shadow-sm space-y-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-3 border-b border-slate-100">
+            <div>
+              <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
+                <span>🛡️ Cek Kesesuaian Data Diri Siswa</span>
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Pastikan nama, NISN, NIK, tanggal lahir, dan alamat Anda di atas sudah cocok dengan data Akta Kelahiran/Ijazah asli.
+              </p>
+            </div>
+            {dataConfirmed && (
+              <span className="px-3 py-1 bg-emerald-50 text-emerald-700 font-bold text-xs rounded-full border border-emerald-200 flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <span>Terverifikasi Sesuai oleh Anda</span>
+              </span>
+            )}
+          </div>
+
+          {correctionMsg && (
+            <div
+              className={`p-3.5 rounded-2xl text-xs font-semibold border flex items-center gap-2 ${
+                correctionMsg.type === 'success'
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                  : 'bg-rose-50 text-rose-800 border-rose-200'
+              }`}
+            >
+              <span>{correctionMsg.text}</span>
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-3 pt-1">
+            <button
+              type="button"
+              onClick={() => {
+                setDataConfirmed(true);
+                setCorrectionMsg({
+                  type: 'success',
+                  text: 'Terima kasih! Anda telah mengonfirmasi bahwa data diri Anda sudah sesuai dengan dokumen resmi.',
+                });
+              }}
+              className="py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-2"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              <span>✓ Data Saya Sudah Sesuai</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsDiscrepancyModalOpen(true)}
+              className="py-2.5 px-4 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold transition-all flex items-center gap-2"
+            >
+              <span>⚠️ Data Tidak Sesuai (Kirim Laporan ke TU)</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Laporan Data Tidak Sesuai ke TU */}
+      {isDiscrepancyModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-4">
+            <h3 className="text-lg font-bold text-slate-900">
+              Lapor Ketidaksesuaian Data ke TU
+            </h3>
+            <p className="text-xs text-slate-500">
+              Sebutkan bagian data mana yang salah (misalnya: penulisan nama salah satu huruf, NISN tidak sesuai ijazah SMP, atau nama ibu salah ketik).
+            </p>
+
+            <textarea
+              rows={4}
+              required
+              value={discrepancyNotes}
+              onChange={(e) => setDiscrepancyNotes(e.target.value)}
+              placeholder="Contoh: Nama saya di kartu tertulis 'Andi Pratama', seharusnya sesuai Akta adalah 'Andy Pratama'. Mohon diperbaiki di Dapodik..."
+              className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-rose-500"
+            />
+
+            <div className="flex gap-2 justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => setIsDiscrepancyModalOpen(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                disabled={isSubmittingCorrection || !discrepancyNotes.trim()}
+                onClick={async () => {
+                  setIsSubmittingCorrection(true);
+                  try {
+                    const res = await submitDataCorrectionRequest({
+                      studentId: data.id,
+                      notes: discrepancyNotes,
+                    });
+                    setCorrectionMsg({ type: 'success', text: res.message });
+                    setIsDiscrepancyModalOpen(false);
+                    setDiscrepancyNotes('');
+                  } catch (err: any) {
+                    setCorrectionMsg({ type: 'error', text: err.message || 'Gagal mengirim laporan' });
+                  } finally {
+                    setIsSubmittingCorrection(false);
+                  }
+                }}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-colors disabled:opacity-50"
+              >
+                {isSubmittingCorrection ? 'Mengirim...' : 'Kirim Aduan ke TU'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Print Specific CSS to format CR80 ID Card layout cleanly when printing */}
       <style jsx global>{`
