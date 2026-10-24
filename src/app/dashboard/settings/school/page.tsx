@@ -1,14 +1,12 @@
-import { PrismaClient } from '@prisma/client';
-import { cookies } from 'next/headers';
+import { prisma } from '@/lib/prisma';
+import { getSessionUserId } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { getSchoolSetting, updateSchoolSetting } from '@/app/actions/attendance';
 import { MapPin, Clock, Shield, Save } from 'lucide-react';
 
-const prisma = new PrismaClient();
 
 export default async function SchoolSettingPage() {
-  const cookieStore = await cookies();
-  const userId = cookieStore.get('auth_token')?.value;
+  const userId = await getSessionUserId();
 
   if (!userId) {
     redirect('/login');

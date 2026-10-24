@@ -1,12 +1,11 @@
 "use server";
 
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { requireRole } from '@/lib/auth';
 
-const prisma = new PrismaClient();
 
 export async function createActivityReport(data: {
-  authorId: string;
   roleSource: string;
   title: string;
   date: string;
@@ -15,11 +14,18 @@ export async function createActivityReport(data: {
   participants?: string;
   documentationUrl?: string;
 }) {
-  const { authorId, roleSource, title, date, location, description, participants, documentationUrl } = data;
+  const author = await requireRole('ADMIN', 'KEPSEK', 'WAKA_KURIKULUM', 'WAKA_KESISWAAN', 'WAKA_SARPRAS', 'WAKA_HUBDIN');
+  const { title, date, location, description, participants, documentationUrl } = data;
+  const wakaRoles = ['WAKA_KURIKULUM', 'WAKA_KESISWAAN', 'WAKA_SARPRAS', 'WAKA_HUBDIN'];
+  const roleSource = author.role.startsWith('WAKA_')
+    ? author.role
+    : wakaRoles.includes(data.roleSource)
+      ? data.roleSource
+      : author.role;
 
   const report = await prisma.activityReport.create({
     data: {
-      authorId,
+      authorId: author.id,
       roleSource,
       title,
       date: new Date(date),
@@ -36,10 +42,8 @@ export async function createActivityReport(data: {
 }
 
 export async function getActivityReports(roleFilter?: string) {
-  const where: any = {};
-  if (roleFilter && roleFilter !== 'ALL') {
-    where.roleSource = roleFilter;
-  }
+  await requireRole('ADMIN', 'KEPSEK', 'WAKA_KURIKULUM', 'WAKA_KESISWAAN', 'WAKA_SARPRAS', 'WAKA_HUBDIN');
+  const where = roleFilter && roleFilter !== 'ALL' ? { roleSource: roleFilter } : {};
 
   return await prisma.activityReport.findMany({
     where,

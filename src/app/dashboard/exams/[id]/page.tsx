@@ -1,13 +1,12 @@
 export const instant = false;
 
-import { PrismaClient } from '@prisma/client';
-import { cookies } from 'next/headers';
+import { prisma } from '@/lib/prisma';
+import { getSessionUserId } from '@/lib/auth';
 import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import CbtExamScreen from './CbtExamScreen';
 import { CheckCircle2, AlertTriangle, ArrowLeft, Award, Clock } from 'lucide-react';
 
-const prisma = new PrismaClient();
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -15,8 +14,7 @@ interface PageProps {
 
 export default async function ExamDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const cookieStore = await cookies();
-  const userId = cookieStore.get('auth_token')?.value;
+  const userId = await getSessionUserId();
 
   if (!userId) {
     redirect('/login');
@@ -56,6 +54,18 @@ export default async function ExamDetailPage({ params }: PageProps) {
 
   if (!exam) {
     notFound();
+  }
+
+  if (user.role === 'STUDENT') {
+    const enrollment = await prisma.enrollment.findUnique({
+      where: { studentId_courseId: { studentId: user.id, courseId: exam.courseId } },
+      select: { id: true },
+    });
+    if (!enrollment) redirect('/dashboard/exams');
+  } else if (user.role === 'TEACHER') {
+    if (exam.course.teacherId !== user.id) redirect('/dashboard/exams');
+  } else if (user.role !== 'ADMIN') {
+    redirect('/dashboard');
   }
 
   // Cek apakah siswa sudah pernah mengerjakan ujian ini

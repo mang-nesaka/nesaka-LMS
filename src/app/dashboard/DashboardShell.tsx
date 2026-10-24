@@ -17,7 +17,7 @@ interface UserInfo {
   name: string;
   email: string;
   role: string;
-  avatarUrl?: string | null;
+  hasAvatar: boolean;
 }
 
 interface DashboardShellProps {
@@ -288,8 +288,8 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
               title="Buka Profil & Kartu Siswa"
             >
               <div className={`w-10 h-10 rounded-xl bg-gradient-to-tr ${roleDetails.avatarGrad} flex items-center justify-center text-white font-bold text-sm shadow-sm shrink-0 overflow-hidden group-hover:scale-105 transition-transform`}>
-                {user.avatarUrl ? (
-                  <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                {user.hasAvatar ? (
+                  <img src="/api/profile/photo" alt={user.name} className="w-full h-full object-cover" />
                 ) : (
                   initial
                 )}
@@ -381,8 +381,8 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
               <span className="text-xs text-slate-400">{user.email}</span>
             </div>
             <div className={`h-9 w-9 rounded-xl bg-gradient-to-tr ${roleDetails.avatarGrad} flex items-center justify-center text-white font-bold shadow-sm overflow-hidden group-hover:scale-105 transition-transform`}>
-              {user.avatarUrl ? (
-                <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+              {user.hasAvatar ? (
+                <img src="/api/profile/photo" alt={user.name} className="w-full h-full object-cover" />
               ) : (
                 initial
               )}

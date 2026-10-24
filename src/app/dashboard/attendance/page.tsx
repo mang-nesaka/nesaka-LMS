@@ -1,14 +1,12 @@
-import { PrismaClient } from '@prisma/client';
-import { cookies } from 'next/headers';
+import { prisma } from '@/lib/prisma';
+import { getSessionUserId } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { getStudentTodayAttendance } from '@/app/actions/attendance';
 import StudentAttendanceClient from './StudentAttendanceClient';
 
-const prisma = new PrismaClient();
 
 export default async function AttendancePage() {
-  const cookieStore = await cookies();
-  const userId = cookieStore.get('auth_token')?.value;
+  const userId = await getSessionUserId();
 
   if (!userId) {
     redirect('/login');
@@ -29,7 +27,11 @@ export default async function AttendancePage() {
     redirect('/login');
   }
 
-  const { attendance, setting, today } = await getStudentTodayAttendance(currentUser.id);
+  if (currentUser.role !== 'STUDENT') {
+    redirect('/dashboard');
+  }
+
+  const { attendance, setting, today } = await getStudentTodayAttendance();
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">

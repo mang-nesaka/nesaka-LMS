@@ -1,32 +1,20 @@
 "use server";
 
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
-import { cookies } from 'next/headers';
+import { requireRole } from '@/lib/auth';
 import ExcelJS from 'exceljs';
 
-const prisma = new PrismaClient();
 
 export async function createExamFromExcel(formData: FormData) {
-  const cookieStore = await cookies();
-  const userId = cookieStore.get('auth_token')?.value;
-
-  if (!userId) {
-    throw new Error('Anda harus login terlebih dahulu.');
-  }
-
-  const currentUser = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { role: true },
-  });
-
-  if (currentUser?.role !== 'TEACHER' && currentUser?.role !== 'ADMIN') {
-    throw new Error('Hanya Guru atau Admin yang dapat membuat ujian CBT.');
-  }
+  const currentUser = await requireRole('TEACHER', 'ADMIN');
 
   const title = (formData.get('title') as string)?.trim();
   const courseId = (formData.get('courseId') as string)?.trim();
-  const durationMinutes = parseInt(formData.get('durationMinutes') as string) || 60;
+  const requestedDuration = Number.parseInt(formData.get('durationMinutes') as string, 10);
+  const durationMinutes = Number.isInteger(requestedDuration) && requestedDuration >= 5 && requestedDuration <= 360
+    ? requestedDuration
+    : 60;
   const description = (formData.get('description') as string)?.trim();
   const file = formData.get('file') as File;
 
@@ -34,19 +22,35 @@ export async function createExamFromExcel(formData: FormData) {
     throw new Error('Judul ujian dan kelas wajib dipilih.');
   }
 
+  const course = await prisma.course.findUnique({
+    where: { id: courseId },
+    select: { teacherId: true },
+  });
+  if (!course) throw new Error('Kelas tidak ditemukan.');
+  if (currentUser.role !== 'ADMIN' && course.teacherId !== currentUser.id) {
+    throw new Error('Anda hanya dapat membuat ujian di kelas yang Anda kelola.');
+  }
+
   if (!file || file.name === 'undefined') {
     throw new Error('File Excel soal ujian (.xlsx) wajib diunggah.');
+  }
+  if (file.size === 0 || file.size > 5 * 1024 * 1024) {
+    throw new Error('Ukuran file Excel harus lebih dari 0 dan maksimal 5MB.');
   }
 
   const bytes = await file.arrayBuffer();
   const buffer = Buffer.from(bytes);
 
   const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(buffer as any);
+  const excelBuffer = buffer as unknown as Parameters<typeof workbook.xlsx.load>[0];
+  await workbook.xlsx.load(excelBuffer);
   const worksheet = workbook.worksheets[0];
 
   if (!worksheet) {
     throw new Error('Sheet pada file Excel tidak ditemukan.');
+  }
+  if (worksheet.rowCount > 501) {
+    throw new Error('File Excel maksimal berisi 500 baris soal.');
   }
 
   const questionsToCreate: Array<{
@@ -68,11 +72,15 @@ export async function createExamFromExcel(formData: FormData) {
         const val = row.getCell(col).value;
         if (val === null || val === undefined) return '';
         if (typeof val === 'object') {
+          const textValue = val as { richText?: unknown; text?: unknown };
           // Jika cell berisi rich text ExcelJS
-          if ('richText' in val && Array.isArray((val as any).richText)) {
-            return (val as any).richText.map((t: any) => t.text).join('').trim();
+          if (Array.isArray(textValue.richText)) {
+            return textValue.richText
+              .map((part: { text?: string }) => part.text || '')
+              .join('')
+              .trim();
           }
-          if ('text' in val) return String((val as any).text).trim();
+          if (textValue.text !== undefined) return String(textValue.text).trim();
         }
         return String(val).trim();
       };
@@ -87,7 +95,10 @@ export async function createExamFromExcel(formData: FormData) {
       const rawKey = getVal(9).toUpperCase(); // Kolom I: Kunci Jawaban
 
       // Validasi kunci
-      const validKey = ['A', 'B', 'C', 'D', 'E'].includes(rawKey) ? rawKey : 'A';
+      if (qText && optA && optB && !['A', 'B', 'C', 'D', 'E'].includes(rawKey)) {
+        throw new Error(`Kunci jawaban pada baris ${rowNumber} harus A, B, C, D, atau E.`);
+      }
+      const validKey = rawKey;
 
       if (qText && optA && optB) {
         questionsToCreate.push({
@@ -127,8 +138,18 @@ export async function createExamFromExcel(formData: FormData) {
 }
 
 export async function deleteExam(formData: FormData) {
+  const currentUser = await requireRole('TEACHER', 'ADMIN');
   const examId = formData.get('id') as string;
-  if (!examId) return;
+  if (!examId) throw new Error('ID ujian tidak valid.');
+
+  const exam = await prisma.exam.findUnique({
+    where: { id: examId },
+    select: { course: { select: { teacherId: true } } },
+  });
+  if (!exam) throw new Error('Ujian tidak ditemukan.');
+  if (currentUser.role !== 'ADMIN' && exam.course.teacherId !== currentUser.id) {
+    throw new Error('Anda hanya dapat menghapus ujian di kelas yang Anda kelola.');
+  }
 
   await prisma.exam.delete({
     where: { id: examId },
@@ -142,11 +163,37 @@ export async function submitExamAction(
   answers: Record<string, string>, 
   violationsCount: number = 0
 ) {
-  const cookieStore = await cookies();
-  const userId = cookieStore.get('auth_token')?.value;
+  const { id: userId } = await requireRole('STUDENT');
+  if (!answers || typeof answers !== 'object' || Array.isArray(answers)) {
+    throw new Error('Jawaban ujian tidak valid.');
+  }
 
-  if (!userId) {
-    throw new Error('Sesi login telah habis.');
+  if (!Number.isInteger(violationsCount) || violationsCount < 0) {
+    throw new Error('Jumlah pelanggaran tidak valid.');
+  }
+
+  const existingResult = await prisma.examResult.findUnique({
+    where: { examId_studentId: { examId, studentId: userId } },
+    select: { id: true },
+  });
+  if (existingResult) throw new Error('Ujian ini sudah pernah dikumpulkan.');
+
+  const exam = await prisma.exam.findUnique({
+    where: { id: examId },
+    select: {
+      course: {
+        select: {
+          enrollments: {
+            where: { studentId: userId },
+            select: { id: true },
+            take: 1,
+          },
+        },
+      },
+    },
+  });
+  if (!exam?.course.enrollments.length) {
+    throw new Error('Anda tidak terdaftar pada kelas ujian ini.');
   }
 
   // Ambil data soal
@@ -160,8 +207,13 @@ export async function submitExamAction(
   }
 
   let correctCount = 0;
+  const normalizedAnswers: Record<string, string> = {};
   questions.forEach((q) => {
-    const studentAnswer = answers[q.id]?.toUpperCase();
+    const rawAnswer = answers[q.id];
+    const studentAnswer = typeof rawAnswer === 'string' && /^[A-E]$/i.test(rawAnswer)
+      ? rawAnswer.toUpperCase()
+      : '';
+    if (studentAnswer) normalizedAnswers[q.id] = studentAnswer;
     if (studentAnswer === q.correctAnswer.toUpperCase()) {
       correctCount++;
     }
@@ -170,28 +222,14 @@ export async function submitExamAction(
   const totalQuestions = questions.length;
   const score = Math.round((correctCount / totalQuestions) * 1000) / 10; // Nilai skala 100 dengan 1 desimal
 
-  const result = await prisma.examResult.upsert({
-    where: {
-      examId_studentId: {
-        examId,
-        studentId: userId,
-      },
-    },
-    update: {
-      score,
-      totalCorrect: correctCount,
-      totalQuestions,
-      answers,
-      violationsCount,
-      submittedAt: new Date(),
-    },
-    create: {
+  const result = await prisma.examResult.create({
+    data: {
       examId,
       studentId: userId,
       score,
       totalCorrect: correctCount,
       totalQuestions,
-      answers,
+      answers: normalizedAnswers,
       violationsCount,
     },
   });

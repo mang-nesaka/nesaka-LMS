@@ -1,14 +1,12 @@
-import { PrismaClient } from '@prisma/client';
-import { cookies } from 'next/headers';
+import { prisma } from '@/lib/prisma';
+import { getSessionUserId } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { getRealtimeAgendasToday } from '@/app/actions/agenda';
 import { School, Clock, BookOpen, AlertTriangle, CheckCircle, UserCheck } from 'lucide-react';
 
-const prisma = new PrismaClient();
 
 export default async function MonitoringPage() {
-  const cookieStore = await cookies();
-  const userId = cookieStore.get('auth_token')?.value;
+  const userId = await getSessionUserId();
 
   if (!userId) {
     redirect('/login');

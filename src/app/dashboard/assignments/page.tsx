@@ -1,14 +1,12 @@
 export const instant = false;
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { createAssignment, deleteAssignment } from '@/app/actions/assignment';
 import { FileText, Plus, Trash2, Calendar, Clock } from 'lucide-react';
-import { cookies } from 'next/headers';
+import { getSessionUserId } from '@/lib/auth';
 
-const prisma = new PrismaClient();
 
 export default async function AssignmentsPage() {
-  const cookieStore = await cookies();
-  const userId = cookieStore.get('auth_token')?.value;
+  const userId = await getSessionUserId();
 
   // Cek role user saat ini
   const currentUser = userId ? await prisma.user.findUnique({ where: { id: userId } }) : null;

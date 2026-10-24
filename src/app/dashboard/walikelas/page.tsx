@@ -1,15 +1,13 @@
-import { PrismaClient } from '@prisma/client';
-import { cookies } from 'next/headers';
+import { prisma } from '@/lib/prisma';
+import { getSessionUserId } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { getClassAttendanceRecap } from '@/app/actions/attendance';
 import { getClassrooms } from '@/app/actions/agenda';
 import WaliKelasClient from './WaliKelasClient';
 
-const prisma = new PrismaClient();
 
 export default async function WaliKelasPage({ searchParams }: { searchParams: Promise<{ class?: string; period?: string }> }) {
-  const cookieStore = await cookies();
-  const userId = cookieStore.get('auth_token')?.value;
+  const userId = await getSessionUserId();
 
   if (!userId) {
     redirect('/login');

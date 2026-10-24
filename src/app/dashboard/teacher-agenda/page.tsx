@@ -1,14 +1,12 @@
-import { PrismaClient } from '@prisma/client';
-import { cookies } from 'next/headers';
+import { prisma } from '@/lib/prisma';
+import { getSessionUserId } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { getClassrooms, getTeacherTodayAgendas } from '@/app/actions/agenda';
 import TeacherAgendaClient from './TeacherAgendaClient';
 
-const prisma = new PrismaClient();
 
 export default async function TeacherAgendaPage() {
-  const cookieStore = await cookies();
-  const userId = cookieStore.get('auth_token')?.value;
+  const userId = await getSessionUserId();
 
   if (!userId) {
     redirect('/login');
@@ -24,7 +22,7 @@ export default async function TeacherAgendaPage() {
   }
 
   const classrooms = await getClassrooms();
-  const todayAgendas = await getTeacherTodayAgendas(currentUser.id);
+  const todayAgendas = await getTeacherTodayAgendas();
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">

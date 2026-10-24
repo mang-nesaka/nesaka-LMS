@@ -16,7 +16,7 @@ interface StudentCardData {
   name: string;
   email: string;
   role: string;
-  avatarUrl?: string | null;
+  hasAvatar: boolean;
   createdAt: string;
   dapodik: {
     namaLengkap: string;
@@ -41,7 +41,7 @@ interface StudentCardData {
 export default function DigitalStudentCard({ data }: { data: StudentCardData }) {
   const [activeSide, setActiveSide] = useState<'front' | 'back'>('front');
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
-  const [currentAvatar, setCurrentAvatar] = useState<string | null>(data.avatarUrl || null);
+  const [currentAvatar, setCurrentAvatar] = useState<string | null>(data.hasAvatar ? '/api/profile/photo' : null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -135,8 +135,9 @@ export default function DigitalStudentCard({ data }: { data: StudentCardData }) 
         img.src = event.target?.result as string;
       };
       reader.readAsDataURL(file);
-    } catch (err: any) {
-      setUploadMessage({ type: 'error', text: err.message || 'Gagal mengunggah foto profil.' });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Gagal mengunggah foto profil.';
+      setUploadMessage({ type: 'error', text: message });
       setIsUploading(false);
     }
   };
@@ -149,7 +150,7 @@ export default function DigitalStudentCard({ data }: { data: StudentCardData }) 
       await deleteProfilePhoto();
       setCurrentAvatar(null);
       setUploadMessage({ type: 'success', text: 'Foto profil telah dihapus.' });
-    } catch (err: any) {
+    } catch {
       setUploadMessage({ type: 'error', text: 'Gagal menghapus foto.' });
     } finally {
       setIsUploading(false);
@@ -728,14 +729,14 @@ export default function DigitalStudentCard({ data }: { data: StudentCardData }) 
                   setIsSubmittingCorrection(true);
                   try {
                     const res = await submitDataCorrectionRequest({
-                      studentId: data.id,
                       notes: discrepancyNotes,
                     });
                     setCorrectionMsg({ type: 'success', text: res.message });
                     setIsDiscrepancyModalOpen(false);
                     setDiscrepancyNotes('');
-                  } catch (err: any) {
-                    setCorrectionMsg({ type: 'error', text: err.message || 'Gagal mengirim laporan' });
+                  } catch (err) {
+                    const message = err instanceof Error ? err.message : 'Gagal mengirim laporan';
+                    setCorrectionMsg({ type: 'error', text: message });
                   } finally {
                     setIsSubmittingCorrection(false);
                   }

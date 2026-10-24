@@ -1,9 +1,9 @@
 "use server";
 
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { requireRole } from '@/lib/auth';
 
-const prisma = new PrismaClient();
 
 function getLocalDateString(): string {
   const now = new Date();
@@ -16,12 +16,14 @@ function getLocalDateString(): string {
 }
 
 export async function getClassrooms() {
+  await requireRole('ADMIN', 'TU', 'TEACHER', 'WALI_KELAS', 'KEPSEK', 'WAKA_KURIKULUM', 'WAKA_SARPRAS');
   return await prisma.classroom.findMany({
     orderBy: { name: 'asc' },
   });
 }
 
 export async function createClassroom(formData: FormData) {
+  await requireRole('ADMIN', 'TU', 'WAKA_KURIKULUM', 'WAKA_SARPRAS');
   const name = formData.get('name') as string;
   const level = (formData.get('level') as string) || '10';
   const code = (formData.get('code') as string) || `NESAKA-${name.toUpperCase().replace(/\s+/g, '-')}`;
@@ -39,7 +41,6 @@ export async function createClassroom(formData: FormData) {
 }
 
 export async function scanBarcodeAndSubmitAgenda(data: {
-  teacherId: string;
   barcodeCode: string;
   subject: string;
   scheduledStartTime: string; // e.g. "07:30"
@@ -47,7 +48,8 @@ export async function scanBarcodeAndSubmitAgenda(data: {
   teachingMaterial: string;   // Materi yang diajarkan
   notes?: string;
 }) {
-  const { teacherId, barcodeCode, subject, scheduledStartTime, scheduledEndTime, teachingMaterial, notes } = data;
+  const teacher = await requireRole('TEACHER');
+  const { barcodeCode, subject, scheduledStartTime, scheduledEndTime, teachingMaterial, notes } = data;
   const todayStr = getLocalDateString();
 
   // 1. Cari kelas berdasarkan Barcode Code
@@ -81,7 +83,7 @@ export async function scanBarcodeAndSubmitAgenda(data: {
   // 3. Simpan Agenda Guru Mengajar
   const agenda = await prisma.teacherClassAgenda.create({
     data: {
-      teacherId,
+      teacherId: teacher.id,
       classroomId: classroom.id,
       subject,
       scheduledStartTime,
@@ -117,11 +119,12 @@ export async function scanBarcodeAndSubmitAgenda(data: {
   };
 }
 
-export async function getTeacherTodayAgendas(teacherId: string) {
+export async function getTeacherTodayAgendas() {
+  const teacher = await requireRole('TEACHER');
   const todayStr = getLocalDateString();
   return await prisma.teacherClassAgenda.findMany({
     where: {
-      teacherId,
+      teacherId: teacher.id,
       date: todayStr,
     },
     include: {
@@ -133,6 +136,7 @@ export async function getTeacherTodayAgendas(teacherId: string) {
 
 // Untuk Monitoring Real-time Kepala Sekolah & Waka Kurikulum
 export async function getRealtimeAgendasToday() {
+  await requireRole('KEPSEK', 'WAKA_KURIKULUM', 'ADMIN', 'TU');
   const todayStr = getLocalDateString();
   return await prisma.teacherClassAgenda.findMany({
     where: {

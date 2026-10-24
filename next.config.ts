@@ -6,6 +6,9 @@ const nextConfig: NextConfig = {
   partialPrefetching: true,
   experimental: {
     agentUpgrade: "security",
+    serverActions: {
+      bodySizeLimit: '6mb',
+    },
   },
   turbopack: {
     rules: {

@@ -1,15 +1,13 @@
 export const instant = false;
 
-import { PrismaClient } from '@prisma/client';
-import { cookies } from 'next/headers';
+import { prisma } from '@/lib/prisma';
+import { getSessionUserId } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import DashboardShell from './DashboardShell';
 
-const prisma = new PrismaClient();
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const cookieStore = await cookies();
-  const userId = cookieStore.get('auth_token')?.value;
+  const userId = await getSessionUserId();
 
   if (!userId) {
     redirect('/login');
@@ -30,8 +28,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect('/login');
   }
 
+  const shellUser = {
+    id: currentUser.id,
+    name: currentUser.name,
+    email: currentUser.email,
+    role: currentUser.role,
+    hasAvatar: Boolean(currentUser.avatarUrl),
+  };
+
   return (
-    <DashboardShell user={currentUser}>
+    <DashboardShell user={shellUser}>
       {children}
     </DashboardShell>
   );

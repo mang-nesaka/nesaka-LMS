@@ -1,20 +1,14 @@
 "use server";
 
-import { PrismaClient } from '@prisma/client';
-import { cookies } from 'next/headers';
+import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { requireUser } from '@/lib/auth';
 
-const prisma = new PrismaClient();
 
 export async function updateProfilePhoto(base64Image: string) {
-  const cookieStore = await cookies();
-  const userId = cookieStore.get('auth_token')?.value;
+  const { id: userId } = await requireUser();
 
-  if (!userId) {
-    throw new Error('Sesi login telah habis. Silakan masuk kembali.');
-  }
-
-  if (!base64Image || !base64Image.startsWith('data:image/')) {
+  if (!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(base64Image) || base64Image.length > 1_400_000) {
     throw new Error('Format gambar tidak valid. Harap unggah file foto gambar.');
   }
 
@@ -30,12 +24,7 @@ export async function updateProfilePhoto(base64Image: string) {
 }
 
 export async function deleteProfilePhoto() {
-  const cookieStore = await cookies();
-  const userId = cookieStore.get('auth_token')?.value;
-
-  if (!userId) {
-    throw new Error('Sesi login telah habis. Silakan masuk kembali.');
-  }
+  const { id: userId } = await requireUser();
 
   await prisma.user.update({
     where: { id: userId },

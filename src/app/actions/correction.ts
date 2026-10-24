@@ -1,15 +1,16 @@
 "use server";
 
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { requireRole } from '@/lib/auth';
 
-const prisma = new PrismaClient();
 
 export async function submitDataCorrectionRequest(data: {
-  studentId: string;
   notes: string;
 }) {
-  const { studentId, notes } = data;
+  const { id: studentId } = await requireRole('STUDENT');
+  const notes = data.notes.trim();
+  if (!notes) throw new Error('Catatan koreksi wajib diisi.');
 
   const request = await prisma.dataCorrectionRequest.create({
     data: {
@@ -30,7 +31,8 @@ export async function submitDataCorrectionRequest(data: {
   };
 }
 
-export async function getStudentCorrectionRequests(studentId: string) {
+export async function getStudentCorrectionRequests() {
+  const { id: studentId } = await requireRole('STUDENT');
   return await prisma.dataCorrectionRequest.findMany({
     where: { studentId },
     orderBy: { createdAt: 'desc' },
@@ -38,6 +40,7 @@ export async function getStudentCorrectionRequests(studentId: string) {
 }
 
 export async function getAllCorrectionRequests() {
+  await requireRole('TU', 'ADMIN');
   return await prisma.dataCorrectionRequest.findMany({
     include: {
       student: {
@@ -56,6 +59,8 @@ export async function getAllCorrectionRequests() {
 }
 
 export async function processCorrectionRequest(id: string, adminResponse: string, status: 'PROCESSED' | 'REJECTED') {
+  await requireRole('TU', 'ADMIN');
+  if (!['PROCESSED', 'REJECTED'].includes(status)) throw new Error('Status koreksi tidak valid.');
   await prisma.dataCorrectionRequest.update({
     where: { id },
     data: {

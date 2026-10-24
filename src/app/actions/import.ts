@@ -1,28 +1,19 @@
 "use server";
 
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
-import { cookies } from 'next/headers';
+import { requireRole } from '@/lib/auth';
+import bcrypt from 'bcryptjs';
 
-const prisma = new PrismaClient();
 
 export async function importStudentsCSV(formData: FormData) {
-  const cookieStore = await cookies();
-  const userId = cookieStore.get('auth_token')?.value;
-
-  if (!userId) {
-    throw new Error('Tidak terautentikasi.');
-  }
-
-  const currentUser = await prisma.user.findUnique({ where: { id: userId } });
-  if (currentUser?.role !== 'TU' && currentUser?.role !== 'ADMIN') {
-    throw new Error('Akses ditolak. Hanya TU atau Admin yang bisa import.');
-  }
+  await requireRole('TU', 'ADMIN');
 
   const file = formData.get('file') as File;
   if (!file || file.name === 'undefined') {
     throw new Error('File tidak ditemukan.');
   }
+  if (file.size > 5 * 1024 * 1024) throw new Error('Ukuran CSV maksimal 5MB.');
 
   const text = await file.text();
   const rows = text.split('\n').map(row => row.trim()).filter(row => row.length > 0);
@@ -39,11 +30,15 @@ export async function importStudentsCSV(formData: FormData) {
       const courseTitle = columns.length >= 4 ? columns[3].trim() : null;
 
       if (name && email && password) {
+        const existingUser = await prisma.user.findUnique({ where: { email }, select: { id: true, role: true } });
+        if (existingUser && existingUser.role !== 'STUDENT') continue;
+        const passwordHash = await bcrypt.hash(password, 12);
+
         // 1. Buat atau update User (Siswa)
         const user = await prisma.user.upsert({
           where: { email },
-          update: { name, password },
-          create: { name, email, password, role: 'STUDENT' }
+          update: { name, password: passwordHash },
+          create: { name, email, password: passwordHash, role: 'STUDENT' }
         });
 
         // 2. Jika ada nama_kelas di CSV, masukkan siswa ke kelas tersebut

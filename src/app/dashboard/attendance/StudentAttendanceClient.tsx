@@ -11,7 +11,13 @@ interface Props {
     email: string;
     studentClass?: string | null;
   };
-  attendance: any;
+  attendance: {
+    checkInTime: Date | null;
+    checkInStatus: string | null;
+    checkInLateMinutes: number;
+    checkOutTime: Date | null;
+    checkOutStatus: string | null;
+  } | null;
   setting: {
     schoolName: string;
     schoolLat: number;
@@ -53,7 +59,6 @@ export default function StudentAttendanceClient({ student, attendance, setting, 
   // Geolocation watcher
   useEffect(() => {
     if (!navigator.geolocation) {
-      setLocationError('Perangkat Anda tidak mendukung fitur GPS Geolocation.');
       return;
     }
 
@@ -89,8 +94,9 @@ export default function StudentAttendanceClient({ student, attendance, setting, 
         videoRef.current.play();
         setIsCameraActive(true);
       }
-    } catch (err: any) {
-      alert(`Gagal mengakses kamera: ${err.message}. Pastikan izin kamera telah diberikan.`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'izin kamera belum diberikan';
+      alert(`Gagal mengakses kamera: ${message}. Pastikan izin kamera telah diberikan.`);
     }
   };
 
@@ -133,7 +139,9 @@ export default function StudentAttendanceClient({ student, attendance, setting, 
       return;
     }
     if (!location) {
-      alert('Lokasi GPS belum terdeteksi. Pastikan GPS aktif dan izin lokasi telah disetujui.');
+      alert(navigator.geolocation
+        ? 'Lokasi GPS belum terdeteksi. Pastikan GPS aktif dan izin lokasi telah disetujui.'
+        : 'Perangkat Anda tidak mendukung fitur GPS Geolocation.');
       return;
     }
 
@@ -147,7 +155,6 @@ export default function StudentAttendanceClient({ student, attendance, setting, 
 
     try {
       const res = await submitStudentAttendance({
-        studentId: student.id,
         type,
         lat: location.lat,
         lng: location.lng,
@@ -159,8 +166,9 @@ export default function StudentAttendanceClient({ student, attendance, setting, 
       } else {
         setSubmitMessage({ type: 'success', text: res.message || 'Presensi berhasil dicatat!' });
       }
-    } catch (err: any) {
-      setSubmitMessage({ type: 'error', text: err.message || 'Terjadi kesalahan sistem saat menyimpan presensi.' });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Terjadi kesalahan sistem saat menyimpan presensi.';
+      setSubmitMessage({ type: 'error', text: message });
     } finally {
       setIsSubmitting(false);
     }
@@ -411,11 +419,11 @@ export default function StudentAttendanceClient({ student, attendance, setting, 
                 </div>
               </div>
 
-              {attendance.checkInPhoto && (
+              {attendance.checkInTime && (
                 <div className="pt-2">
                   <span className="text-[11px] font-semibold text-slate-500 block mb-1.5">Foto Presensi Tersimpan:</span>
                   <img
-                    src={attendance.checkInPhoto}
+                    src={`/api/attendance/${encodeURIComponent(student.id)}/${today}/photo`}
                     alt="Foto Presensi"
                     className="w-20 h-20 object-cover rounded-xl border border-slate-200 shadow-sm"
                   />

@@ -1,13 +1,11 @@
-import { PrismaClient } from '@prisma/client';
-import { cookies } from 'next/headers';
+import { prisma } from '@/lib/prisma';
+import { getSessionUserId } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { Laptop, Award, AlertTriangle, Users, BookOpen, CheckCircle } from 'lucide-react';
 
-const prisma = new PrismaClient();
 
 export default async function ExamRecapPage() {
-  const cookieStore = await cookies();
-  const userId = cookieStore.get('auth_token')?.value;
+  const userId = await getSessionUserId();
 
   if (!userId) {
     redirect('/login');

@@ -1,12 +1,11 @@
 export const instant = false;
 
-import { PrismaClient } from '@prisma/client';
-import { cookies } from 'next/headers';
+import { prisma } from '@/lib/prisma';
+import { getSessionUserId } from '@/lib/auth';
 import Link from 'next/link';
 import JoinButton from './JoinButton';
 import { BookOpen, User, Users, GraduationCap, ArrowLeft, School } from 'lucide-react';
 
-const prisma = new PrismaClient();
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -46,8 +45,7 @@ export default async function JoinPage({ params }: PageProps) {
     );
   }
 
-  const cookieStore = await cookies();
-  const userId = cookieStore.get('auth_token')?.value;
+  const userId = await getSessionUserId();
 
   let currentUser = null;
   let isEnrolled = false;

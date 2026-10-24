@@ -1,15 +1,13 @@
 export const instant = false;
 
-import { PrismaClient } from '@prisma/client';
-import { cookies } from 'next/headers';
+import { prisma } from '@/lib/prisma';
+import { getSessionUserId } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import DigitalStudentCard from './DigitalStudentCard';
 
-const prisma = new PrismaClient();
 
 export default async function ProfilePage() {
-  const cookieStore = await cookies();
-  const userId = cookieStore.get('auth_token')?.value;
+  const userId = await getSessionUserId();
 
   if (!userId) {
     redirect('/login');
@@ -64,7 +62,7 @@ export default async function ProfilePage() {
     name: user.name,
     email: user.email,
     role: user.role,
-    avatarUrl: user.avatarUrl,
+    hasAvatar: Boolean(user.avatarUrl),
     createdAt: user.createdAt.toISOString(),
     dapodik: user.dapodikForm
       ? {

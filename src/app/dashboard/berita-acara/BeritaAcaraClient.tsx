@@ -12,14 +12,26 @@ interface Props {
     role: string;
     email: string;
   };
-  reports: any[];
+  reports: ActivityReportItem[];
   initialRoleFilter: string;
+}
+
+interface ActivityReportItem {
+  id: string;
+  roleSource: string;
+  date: string | Date;
+  title: string;
+  description: string;
+  location: string | null;
+  participants: string | null;
+  documentationUrl: string | null;
+  author: { name: string } | null;
 }
 
 export default function BeritaAcaraClient({ user, reports, initialRoleFilter }: Props) {
   const router = useRouter();
   const [showModal, setShowModal] = useState(false);
-  const [selectedReport, setSelectedReport] = useState<any | null>(null);
+  const [selectedReport, setSelectedReport] = useState<ActivityReportItem | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form State
@@ -60,7 +72,6 @@ export default function BeritaAcaraClient({ user, reports, initialRoleFilter }: 
     setIsSubmitting(true);
     try {
       await createActivityReport({
-        authorId: user.id,
         roleSource,
         title,
         date,
@@ -76,8 +87,9 @@ export default function BeritaAcaraClient({ user, reports, initialRoleFilter }: 
       setDescription('');
       setDocumentationUrl('');
       router.refresh();
-    } catch (err: any) {
-      alert(`Gagal menyimpan berita acara: ${err.message}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Terjadi kesalahan yang tidak diketahui.';
+      alert(`Gagal menyimpan berita acara: ${message}`);
     } finally {
       setIsSubmitting(false);
     }

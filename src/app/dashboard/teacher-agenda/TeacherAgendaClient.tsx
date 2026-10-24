@@ -42,7 +42,6 @@ export default function TeacherAgendaClient({ teacher, classrooms, initialAgenda
 
     try {
       const res = await scanBarcodeAndSubmitAgenda({
-        teacherId: teacher.id,
         barcodeCode,
         subject,
         scheduledStartTime,

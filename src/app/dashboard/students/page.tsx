@@ -1,14 +1,12 @@
 export const instant = false;
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { Search, UserPlus, MoreVertical, GraduationCap, Mail } from 'lucide-react';
-import { cookies } from 'next/headers';
+import { getSessionUserId } from '@/lib/auth';
 import ImportForm from './ImportForm';
 
-const prisma = new PrismaClient();
 
 export default async function StudentsPage() {
-  const cookieStore = await cookies();
-  const userId = cookieStore.get('auth_token')?.value;
+  const userId = await getSessionUserId();
 
   const currentUser = userId ? await prisma.user.findUnique({ where: { id: userId } }) : null;
   const isAdmin = currentUser?.role === 'ADMIN';

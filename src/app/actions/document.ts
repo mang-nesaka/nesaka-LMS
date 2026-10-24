@@ -1,20 +1,14 @@
 "use server";
 
-import { PrismaClient } from '@prisma/client';
-import { cookies } from 'next/headers';
+import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { requireRole } from '@/lib/auth';
 
-const prisma = new PrismaClient();
 
 const VALID_DOC_TYPES = ['AKTE_KELAHIRAN', 'KARTU_KELUARGA', 'IJAZAH_SMP'];
 
 export async function uploadStudentDocument(formData: FormData) {
-  const cookieStore = await cookies();
-  const userId = cookieStore.get('auth_token')?.value;
-
-  if (!userId) {
-    throw new Error('Sesi login telah habis. Silakan login kembali.');
-  }
+  const { id: userId } = await requireRole('STUDENT');
 
   const docType = formData.get('docType') as string;
   const file = formData.get('file') as File;
@@ -73,12 +67,8 @@ export async function uploadStudentDocument(formData: FormData) {
 }
 
 export async function deleteStudentDocument(docType: string) {
-  const cookieStore = await cookies();
-  const userId = cookieStore.get('auth_token')?.value;
-
-  if (!userId) {
-    throw new Error('Sesi login telah habis.');
-  }
+  const { id: userId } = await requireRole('STUDENT');
+  if (!VALID_DOC_TYPES.includes(docType)) throw new Error('Jenis dokumen tidak valid.');
 
   await prisma.studentDocument.deleteMany({
     where: {
@@ -92,21 +82,8 @@ export async function deleteStudentDocument(docType: string) {
 }
 
 export async function verifyDocumentAction(documentId: string, status: 'VERIFIED' | 'REJECTED', feedback?: string) {
-  const cookieStore = await cookies();
-  const userId = cookieStore.get('auth_token')?.value;
-
-  if (!userId) {
-    throw new Error('Sesi login telah habis.');
-  }
-
-  const reviewer = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { role: true },
-  });
-
-  if (reviewer?.role !== 'TU' && reviewer?.role !== 'ADMIN') {
-    throw new Error('Hanya Staf Tata Usaha (TU) atau Admin yang berhak memverifikasi dokumen.');
-  }
+  await requireRole('TU', 'ADMIN');
+  if (!['VERIFIED', 'REJECTED'].includes(status)) throw new Error('Status dokumen tidak valid.');
 
   await prisma.studentDocument.update({
     where: { id: documentId },

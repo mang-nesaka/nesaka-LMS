@@ -1,7 +1,7 @@
 export const instant = false;
 
-import { PrismaClient } from '@prisma/client';
-import { cookies } from 'next/headers';
+import { prisma } from '@/lib/prisma';
+import { getSessionUserId } from '@/lib/auth';
 import Link from 'next/link';
 import { deleteExam } from '@/app/actions/exam';
 import CreateExamModal from './CreateExamModal';
@@ -10,11 +10,9 @@ import {
   CheckCircle2, Play, Trash2, ExternalLink, ShieldAlert, Award, ChevronRight
 } from 'lucide-react';
 
-const prisma = new PrismaClient();
 
 export default async function ExamsPage() {
-  const cookieStore = await cookies();
-  const userId = cookieStore.get('auth_token')?.value;
+  const userId = await getSessionUserId();
 
   const currentUser = userId ? await prisma.user.findUnique({ where: { id: userId } }) : null;
   const isTeacherOrAdmin = currentUser?.role === 'TEACHER' || currentUser?.role === 'ADMIN';

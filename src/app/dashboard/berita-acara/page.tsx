@@ -1,14 +1,12 @@
-import { PrismaClient } from '@prisma/client';
-import { cookies } from 'next/headers';
+import { prisma } from '@/lib/prisma';
+import { getSessionUserId } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { getActivityReports } from '@/app/actions/activity';
 import BeritaAcaraClient from './BeritaAcaraClient';
 
-const prisma = new PrismaClient();
 
 export default async function BeritaAcaraPage({ searchParams }: { searchParams: Promise<{ role?: string }> }) {
-  const cookieStore = await cookies();
-  const userId = cookieStore.get('auth_token')?.value;
+  const userId = await getSessionUserId();
 
   if (!userId) {
     redirect('/login');

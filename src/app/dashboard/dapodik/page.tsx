@@ -1,17 +1,15 @@
 export const instant = false;
 
-import { PrismaClient } from '@prisma/client';
-import { cookies } from 'next/headers';
+import { prisma } from '@/lib/prisma';
+import { getSessionUserId } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import DapodikClientForm from './DapodikClientForm';
 import { FileSpreadsheet, Users, CheckCircle, Download, Search, School } from 'lucide-react';
 import Link from 'next/link';
 
-const prisma = new PrismaClient();
 
 export default async function DapodikPage() {
-  const cookieStore = await cookies();
-  const userId = cookieStore.get('auth_token')?.value;
+  const userId = await getSessionUserId();
 
   if (!userId) {
     redirect('/login');

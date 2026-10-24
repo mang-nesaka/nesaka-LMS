@@ -1,29 +1,28 @@
 export const instant = false;
 
-import { PrismaClient } from '@prisma/client';
-import { cookies } from 'next/headers';
+import { prisma } from '@/lib/prisma';
+import { getSessionUserId } from '@/lib/auth';
 import CreateCourseForm from './CreateCourseForm';
 import CourseCard from './CourseCard';
 import { BookOpen, Sparkles, CheckCircle2 } from 'lucide-react';
 
-const prisma = new PrismaClient();
 
 export default async function CoursesPage() {
-  const cookieStore = await cookies();
-  const userId = cookieStore.get('auth_token')?.value;
+  const userId = await getSessionUserId();
 
   // Cek user saat ini
   const currentUser = userId ? await prisma.user.findUnique({ where: { id: userId } }) : null;
   const isTeacherOrAdmin = currentUser?.role === 'TEACHER' || currentUser?.role === 'ADMIN';
   const isStudent = currentUser?.role === 'STUDENT';
+  const courseWhere = currentUser?.role === 'TEACHER' && userId
+    ? { teacherId: userId }
+    : currentUser?.role === 'STUDENT' && userId
+    ? { enrollments: { some: { studentId: userId } } }
+    : {};
 
   // Ambil data semua kelas
   const courses = await prisma.course.findMany({
-    where: isTeacherOrAdmin && currentUser?.role !== 'ADMIN' 
-      ? { teacherId: userId } // Guru hanya melihat kelas yang dia ajar
-      : isStudent 
-      ? { enrollments: { some: { studentId: userId } } } // Siswa melihat kelas yang diikutinya
-      : {}, // Admin melihat semua
+    where: courseWhere,
     include: {
       teacher: {
         select: { name: true }

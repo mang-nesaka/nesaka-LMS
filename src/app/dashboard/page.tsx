@@ -1,7 +1,7 @@
 export const instant = false;
 
-import { PrismaClient } from '@prisma/client';
-import { cookies } from 'next/headers';
+import { prisma } from '@/lib/prisma';
+import { getSessionUserId } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { 
@@ -10,11 +10,9 @@ import {
   Award, Play, ArrowRight, ShieldCheck, Download, Sparkles, ExternalLink
 } from 'lucide-react';
 
-const prisma = new PrismaClient();
 
 export default async function DashboardPage() {
-  const cookieStore = await cookies();
-  const userId = cookieStore.get('auth_token')?.value;
+  const userId = await getSessionUserId();
 
   if (!userId) {
     redirect('/login');
@@ -518,7 +516,7 @@ export default async function DashboardPage() {
   // ==========================================
   if (currentUser.role === 'KEPSEK') {
     const todayStr = new Date().toISOString().split('T')[0];
-    const [realtimeAgendas, totalStudents, todayAttendances, examResults, recentReports] = await Promise.all([
+    const [realtimeAgendas, totalStudents, hadirCount, examResults, recentReports] = await Promise.all([
       prisma.teacherClassAgenda.findMany({
         where: { date: todayStr },
         include: {
@@ -528,8 +526,8 @@ export default async function DashboardPage() {
         orderBy: { scanTime: 'desc' },
       }),
       prisma.user.count({ where: { role: 'STUDENT' } }),
-      prisma.studentAttendance.findMany({
-        where: { date: todayStr },
+      prisma.studentAttendance.count({
+        where: { date: todayStr, checkInStatus: { in: ['HADIR', 'TERLAMBAT'] } },
       }),
       prisma.examResult.findMany({
         include: {
@@ -546,7 +544,6 @@ export default async function DashboardPage() {
       }),
     ]);
 
-    const hadirCount = todayAttendances.filter((a) => a.checkInStatus === 'HADIR' || a.checkInStatus === 'TERLAMBAT').length;
     const persentaseHadir = totalStudents > 0 ? Math.round((hadirCount / totalStudents) * 100) : 0;
     const lateTeachers = realtimeAgendas.filter((a) => a.isLate);
 

@@ -1,18 +1,12 @@
 "use server";
 
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
-import { cookies } from 'next/headers';
+import { requireRole } from '@/lib/auth';
 
-const prisma = new PrismaClient();
 
 export async function saveDapodikForm(formData: FormData) {
-  const cookieStore = await cookies();
-  const userId = cookieStore.get('auth_token')?.value;
-
-  if (!userId) {
-    throw new Error('Anda harus login terlebih dahulu.');
-  }
+  const { id: userId } = await requireRole('STUDENT');
 
   // Cek apakah siswa sudah pernah mengisi
   const existing = await prisma.dapodikForm.findUnique({

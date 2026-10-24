@@ -1,14 +1,12 @@
-import { PrismaClient } from '@prisma/client';
-import { cookies } from 'next/headers';
+import { prisma } from '@/lib/prisma';
+import { getSessionUserId } from '@/lib/auth';
 import { NextRequest, NextResponse } from 'next/server';
 import ExcelJS from 'exceljs';
 import { populateExactFpdWorksheet, buildExactFpdGrid, gridToCsv } from '@/lib/excelFpd';
 
-const prisma = new PrismaClient();
 
 export async function GET(request: NextRequest) {
-  const cookieStore = await cookies();
-  const userId = cookieStore.get('auth_token')?.value;
+  const userId = await getSessionUserId();
 
   if (!userId) {
     return new NextResponse('Unauthorized', { status: 401 });

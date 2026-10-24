@@ -1,8 +1,8 @@
 "use server";
 
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
+import type { Prisma } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
-import { cookies } from 'next/headers';
 import {
   calculateDistanceMeters,
   canUpdateSchoolLocation,
@@ -12,8 +12,8 @@ import {
   isValidCoordinate,
   isWithinAttendanceRadius,
 } from '@/lib/attendance';
+import { requireRole } from '@/lib/auth';
 
-const prisma = new PrismaClient();
 
 // Format local date YYYY-MM-DD
 function getLocalDateString(): string {
@@ -59,21 +59,7 @@ export async function getSchoolSetting() {
 }
 
 export async function updateSchoolSetting(formData: FormData) {
-  const cookieStore = await cookies();
-  const userId = cookieStore.get('auth_token')?.value;
-
-  if (!userId) {
-    throw new Error('Sesi login telah habis. Silakan login kembali.');
-  }
-
-  const currentUser = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { role: true },
-  });
-
-  if (!currentUser || !['TU', 'ADMIN'].includes(currentUser.role)) {
-    throw new Error('Akses ditolak. Hanya TU atau Admin yang dapat mengubah pengaturan sekolah.');
-  }
+  const currentUser = await requireRole('TU', 'ADMIN');
 
   const currentSetting = await getSchoolSetting();
   const schoolName = formData.get('schoolName') as string;
@@ -124,7 +110,8 @@ export async function updateSchoolSetting(formData: FormData) {
   return { success: true, message: 'Pengaturan lokasi & jam sekolah berhasil diperbarui.' };
 }
 
-export async function getStudentTodayAttendance(studentId: string) {
+export async function getStudentTodayAttendance() {
+  const { id: studentId } = await requireRole('STUDENT');
   const dateStr = getLocalDateString();
   const attendance = await prisma.studentAttendance.findUnique({
     where: {
@@ -132,6 +119,16 @@ export async function getStudentTodayAttendance(studentId: string) {
         studentId,
         date: dateStr,
       },
+    },
+    select: {
+      id: true,
+      studentId: true,
+      date: true,
+      checkInTime: true,
+      checkInStatus: true,
+      checkInLateMinutes: true,
+      checkOutTime: true,
+      checkOutStatus: true,
     },
   });
 
@@ -141,13 +138,17 @@ export async function getStudentTodayAttendance(studentId: string) {
 }
 
 export async function submitStudentAttendance(data: {
-  studentId: string;
   type: 'IN' | 'OUT';
   lat: number;
   lng: number;
   photoBase64: string;
 }) {
-  const { studentId, type, lat, lng, photoBase64 } = data;
+  const { id: studentId } = await requireRole('STUDENT');
+  const { type, lat, lng, photoBase64 } = data;
+  if (!['IN', 'OUT'].includes(type)) throw new Error('Jenis presensi tidak valid.');
+  if (!/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(photoBase64) || photoBase64.length > 1_400_000) {
+    throw new Error('Foto presensi tidak valid atau terlalu besar.');
+  }
   const dateStr = getLocalDateString();
   const setting = await getSchoolSetting();
 
@@ -289,14 +290,20 @@ export async function getClassAttendanceRecap(options: {
   period: 'daily' | 'weekly' | 'monthly' | 'semester';
   date?: string;
 }) {
+  const currentUser = await requireRole('WALI_KELAS', 'ADMIN', 'KEPSEK', 'WAKA_KESISWAAN', 'TU');
   const { className, period } = options;
-  const now = new Date();
   const todayStr = getLocalDateString();
+  const effectiveClassName = currentUser.role === 'WALI_KELAS'
+    ? currentUser.waliKelasOf
+    : className;
+  if (currentUser.role === 'WALI_KELAS' && !effectiveClassName) {
+    throw new Error('Akun Wali Kelas belum memiliki kelas binaan.');
+  }
 
   // Query students
-  const studentWhere: any = { role: 'STUDENT' };
-  if (className && className !== 'ALL') {
-    studentWhere.studentClass = className;
+  const studentWhere: Prisma.UserWhereInput = { role: 'STUDENT' };
+  if (effectiveClassName && effectiveClassName !== 'ALL') {
+    studentWhere.studentClass = effectiveClassName;
   }
 
   const students = await prisma.user.findMany({
@@ -310,6 +317,14 @@ export async function getClassAttendanceRecap(options: {
       attendances: {
         orderBy: { date: 'desc' },
         take: period === 'daily' ? 1 : period === 'weekly' ? 7 : period === 'monthly' ? 30 : 120,
+        select: {
+          date: true,
+          checkInTime: true,
+          checkInStatus: true,
+          checkInLateMinutes: true,
+          checkOutTime: true,
+          checkOutStatus: true,
+        },
       },
     },
     orderBy: { name: 'asc' },

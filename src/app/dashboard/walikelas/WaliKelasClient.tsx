@@ -220,9 +220,9 @@ export default function WaliKelasClient({
                         )}
                       </td>
                       <td className="py-3 px-3 text-center">
-                        {todayAtt?.checkInPhoto ? (
+                        {todayAtt?.checkInTime ? (
                           <img
-                            src={todayAtt.checkInPhoto}
+                            src={`/api/attendance/${encodeURIComponent(student.id)}/${today}/photo`}
                             alt="Foto Presensi"
                             className="w-8 h-8 rounded-full object-cover mx-auto border border-slate-200 shadow-sm"
                           />

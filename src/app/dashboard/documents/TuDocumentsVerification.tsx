@@ -31,7 +31,15 @@ interface StudentRow {
   documents: DocumentRecord[];
 }
 
-export default function TuDocumentsVerification({ students }: { students: StudentRow[] }) {
+export default function TuDocumentsVerification({
+  students,
+  page,
+  hasNextPage,
+}: {
+  students: StudentRow[];
+  page: number;
+  hasNextPage: boolean;
+}) {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'ALL' | 'PENDING' | 'COMPLETE'>('ALL');
   const [activeModalDoc, setActiveModalDoc] = useState<{
@@ -184,6 +192,13 @@ export default function TuDocumentsVerification({ students }: { students: Studen
             >
               Lengkap Sah (3/3)
             </button>
+          </div>
+        </div>
+        <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-xs text-slate-600">
+          <span>Halaman {page} · {students.length} siswa</span>
+          <div className="flex gap-2">
+            {page > 1 && <a className="rounded border px-3 py-1.5 hover:bg-slate-50" href={`?page=${page - 1}`}>Sebelumnya</a>}
+            {hasNextPage && <a className="rounded border px-3 py-1.5 hover:bg-slate-50" href={`?page=${page + 1}`}>Berikutnya</a>}
           </div>
         </div>
       </div>
