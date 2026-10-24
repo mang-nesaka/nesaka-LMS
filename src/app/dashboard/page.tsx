@@ -31,7 +31,7 @@ export default async function DashboardPage() {
   // TAMPILAN DASHBOARD SISWA
   // ==========================================
   if (currentUser.role === 'STUDENT') {
-    const [dapodikData, enrolledCourses, assignments, exams] = await Promise.all([
+    const [dapodikData, enrolledCourses, assignments, exams] = await prisma.$transaction([
       prisma.dapodikForm.findUnique({ where: { studentId: currentUser.id } }),
       prisma.course.findMany({
         where: { enrollments: { some: { studentId: currentUser.id } } },
@@ -281,7 +281,7 @@ export default async function DashboardPage() {
   // TAMPILAN DASHBOARD GURU
   // ==========================================
   if (currentUser.role === 'TEACHER') {
-    const [teacherCourses, teacherExams, pendingSubmissions] = await Promise.all([
+    const [teacherCourses, teacherExams, pendingSubmissions] = await prisma.$transaction([
       prisma.course.findMany({
         where: { teacherId: currentUser.id },
         include: {
@@ -516,7 +516,7 @@ export default async function DashboardPage() {
   // ==========================================
   if (currentUser.role === 'KEPSEK') {
     const todayStr = new Date().toISOString().split('T')[0];
-    const [realtimeAgendas, totalStudents, hadirCount, examResults, recentReports] = await Promise.all([
+    const [realtimeAgendas, totalStudents, hadirCount, examResults, recentReports] = await prisma.$transaction([
       prisma.teacherClassAgenda.findMany({
         where: { date: todayStr },
         include: {
@@ -693,7 +693,7 @@ export default async function DashboardPage() {
   // ==========================================
   // TAMPILAN DASHBOARD TATA USAHA (TU) & ADMIN
   // ==========================================
-  const [totalStudents, totalCourses, dapodikCount, totalExams] = await Promise.all([
+  const [totalStudents, totalCourses, dapodikCount, totalExams] = await prisma.$transaction([
     prisma.user.count({ where: { role: 'STUDENT' } }),
     prisma.course.count(),
     prisma.dapodikForm.count(),

@@ -1,10 +1,12 @@
 import { cookies } from 'next/headers';
+import { connection } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyAuthToken } from '@/lib/auth-token';
 
 export async function getSessionUserId(): Promise<string | null> {
+  await connection();
   const token = (await cookies()).get('auth_token')?.value;
-  return token ? verifyAuthToken(token) : null;
+  return token ? verifyAuthToken(token, Math.floor(Date.now() / 1000)) : null;
 }
 
 export async function getCurrentUser() {

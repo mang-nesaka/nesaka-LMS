@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { requireRole } from '@/lib/auth';
+import { findActiveSchedule, findNextSchedule } from '@/lib/classSchedule';
 
 
 function getLocalDateString(): string {
@@ -40,37 +41,162 @@ export async function createClassroom(formData: FormData) {
   return { success: true, message: `Ruang kelas ${name} berhasil ditambahkan.` };
 }
 
+export async function getClassSchedules() {
+  await requireRole('ADMIN', 'TU');
+  return prisma.classTeachingSchedule.findMany({
+    include: {
+      classroom: { select: { id: true, name: true, code: true } },
+      teacher: { select: { id: true, name: true, email: true } },
+    },
+    orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }],
+  });
+}
+
+export async function createClassSchedule(formData: FormData) {
+  await requireRole('ADMIN', 'TU');
+  const teacherId = String(formData.get('teacherId') ?? '');
+  const classroomId = String(formData.get('classroomId') ?? '');
+  const subject = String(formData.get('subject') ?? '').trim();
+  const dayOfWeek = Number(formData.get('dayOfWeek'));
+  const startTime = String(formData.get('startTime') ?? '');
+  const endTime = String(formData.get('endTime') ?? '');
+
+  if (!teacherId || !classroomId || !subject || !Number.isInteger(dayOfWeek) || dayOfWeek < 0 || dayOfWeek > 6) {
+    throw new Error('Guru, ruang, mata pelajaran, dan hari wajib dipilih.');
+  }
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(startTime) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(endTime) || startTime >= endTime) {
+    throw new Error('Rentang waktu jadwal tidak valid.');
+  }
+
+  const teacher = await prisma.user.findUnique({
+    where: { id: teacherId },
+    select: { role: true },
+  });
+  if (teacher?.role !== 'TEACHER') throw new Error('Pengguna yang dipilih bukan Guru Mapel.');
+  const classroom = await prisma.classroom.findUnique({ where: { id: classroomId }, select: { id: true } });
+  if (!classroom) throw new Error('Ruang kelas tidak ditemukan.');
+
+  const conflict = await prisma.classTeachingSchedule.findFirst({
+    where: {
+      isActive: true,
+      dayOfWeek,
+      startTime: { lt: endTime },
+      endTime: { gt: startTime },
+      OR: [{ teacherId }, { classroomId }],
+    },
+    select: { id: true },
+  });
+  if (conflict) throw new Error('Jadwal bentrok dengan jadwal guru atau ruang yang sudah ada.');
+
+  await prisma.classTeachingSchedule.create({
+    data: { teacherId, classroomId, subject, dayOfWeek, startTime, endTime },
+  });
+  revalidatePath('/dashboard/classrooms/schedules');
+  revalidatePath('/dashboard/teacher-agenda');
+  return { success: true };
+}
+
+export async function deactivateClassSchedule(scheduleId: string) {
+  await requireRole('ADMIN', 'TU');
+  if (!scheduleId) throw new Error('Jadwal tidak valid.');
+  await prisma.classTeachingSchedule.update({
+    where: { id: scheduleId },
+    data: { isActive: false },
+  });
+  revalidatePath('/dashboard/classrooms/schedules');
+  revalidatePath('/dashboard/teacher-agenda');
+  return { success: true };
+}
+
+export async function getTeacherTodaySchedules() {
+  const teacher = await requireRole('TEACHER');
+  const dayOfWeek = getLocalDayOfWeek();
+  return prisma.classTeachingSchedule.findMany({
+    where: { teacherId: teacher.id, dayOfWeek, isActive: true },
+    include: { classroom: { select: { name: true, code: true } } },
+    orderBy: { startTime: 'asc' },
+  });
+}
+
+export async function getTeacherAgendaDashboard() {
+  const teacher = await requireRole('TEACHER');
+  const today = getLocalDateString();
+  const dayOfWeek = getLocalDayOfWeek();
+  const [schedules, agendas] = await prisma.$transaction([
+    prisma.classTeachingSchedule.findMany({
+      where: { teacherId: teacher.id, dayOfWeek, isActive: true },
+      include: { classroom: { select: { name: true, code: true } } },
+      orderBy: { startTime: 'asc' },
+    }),
+    prisma.teacherClassAgenda.findMany({
+      where: { teacherId: teacher.id, date: today },
+      include: { classroom: true, classSchedule: { select: { id: true } } },
+      orderBy: { scanTime: 'desc' },
+    }),
+  ]);
+  return { schedules, agendas };
+}
+
+function getLocalDayOfWeek(): number {
+  const now = new Date();
+  const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+  return new Date(utc + 7 * 3600000).getDay();
+}
+
 export async function scanBarcodeAndSubmitAgenda(data: {
   barcodeCode: string;
-  subject: string;
-  scheduledStartTime: string; // e.g. "07:30"
-  scheduledEndTime: string;   // e.g. "09:30"
   teachingMaterial: string;   // Materi yang diajarkan
   notes?: string;
 }) {
   const teacher = await requireRole('TEACHER');
-  const { barcodeCode, subject, scheduledStartTime, scheduledEndTime, teachingMaterial, notes } = data;
+  const { barcodeCode, teachingMaterial, notes } = data;
   const todayStr = getLocalDateString();
-
-  // 1. Cari kelas berdasarkan Barcode Code
-  const classroom = await prisma.classroom.findUnique({
-    where: { code: barcodeCode.trim() },
+  const schedules = await prisma.classTeachingSchedule.findMany({
+    where: {
+      teacherId: teacher.id,
+      dayOfWeek: getLocalDayOfWeek(),
+      isActive: true,
+    },
+    include: { classroom: true },
+    orderBy: { startTime: 'asc' },
   });
 
-  if (!classroom) {
-    return {
-      error: `Barcode Ruang Kelas Tidak Valid! Kode "${barcodeCode}" tidak ditemukan di database sekolah.`,
-    };
-  }
-
-  // 2. Hitung Waktu dan Keterlambatan
   const now = new Date();
   const utc = now.getTime() + now.getTimezoneOffset() * 60000;
   const wibDate = new Date(utc + 7 * 3600000);
+  const currentTime = `${String(wibDate.getHours()).padStart(2, '0')}:${String(wibDate.getMinutes()).padStart(2, '0')}`;
+  const schedule = findActiveSchedule(schedules, currentTime);
+
+  if (!schedule) {
+    const nextSchedule = findNextSchedule(schedules, currentTime);
+    if (nextSchedule) return { error: `Jadwal berikutnya mulai pukul ${nextSchedule.startTime} WIB di ${nextSchedule.classroom.name}.` };
+    return { error: 'Tidak ada jadwal mengajar aktif pada waktu ini.' };
+  }
+  if (schedule.classroom.code.trim().toLowerCase() !== barcodeCode.trim().toLowerCase()) {
+    return { error: `QR tidak sesuai. Jadwal saat ini berada di ${schedule.classroom.name}.` };
+  }
+
+  const existingAgenda = await prisma.teacherClassAgenda.findFirst({
+    where: { classScheduleId: schedule.id, date: todayStr },
+    select: { id: true },
+  });
+  if (existingAgenda) return { error: 'Jadwal ini sudah discan hari ini.' };
+
+  if (!teachingMaterial.trim()) return { error: 'Materi pembelajaran wajib diisi.' };
+  const { classroom } = schedule;
+  const { subject, startTime: scheduledStartTime, endTime: scheduledEndTime } = schedule;
+
+  // 2. Hitung Waktu dan Keterlambatan
   const currentTotalMinutes = wibDate.getHours() * 60 + wibDate.getMinutes();
 
   const [schedH, schedM] = scheduledStartTime.split(':').map(Number);
   const schedTotalMinutes = schedH * 60 + schedM;
+  const [endH, endM] = scheduledEndTime.split(':').map(Number);
+  const endTotalMinutes = endH * 60 + endM;
+
+  if (currentTotalMinutes >= endTotalMinutes) {
+    return { error: `Waktu jadwal ini berakhir pukul ${scheduledEndTime} WIB.` };
+  }
 
   let isLate = false;
   let lateMinutes = 0;
@@ -85,6 +211,7 @@ export async function scanBarcodeAndSubmitAgenda(data: {
     data: {
       teacherId: teacher.id,
       classroomId: classroom.id,
+      classScheduleId: schedule.id,
       subject,
       scheduledStartTime,
       scheduledEndTime,
@@ -129,6 +256,7 @@ export async function getTeacherTodayAgendas() {
     },
     include: {
       classroom: true,
+      classSchedule: { select: { id: true } },
     },
     orderBy: { scanTime: 'desc' },
   });

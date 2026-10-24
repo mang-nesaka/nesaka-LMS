@@ -1,28 +1,9 @@
-import { prisma } from '@/lib/prisma';
-import { getSessionUserId } from '@/lib/auth';
-import { redirect } from 'next/navigation';
-import { getClassrooms, getTeacherTodayAgendas } from '@/app/actions/agenda';
+import { getTeacherAgendaDashboard } from '@/app/actions/agenda';
 import TeacherAgendaClient from './TeacherAgendaClient';
 
 
 export default async function TeacherAgendaPage() {
-  const userId = await getSessionUserId();
-
-  if (!userId) {
-    redirect('/login');
-  }
-
-  const currentUser = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { id: true, name: true, role: true, email: true },
-  });
-
-  if (!currentUser) {
-    redirect('/login');
-  }
-
-  const classrooms = await getClassrooms();
-  const todayAgendas = await getTeacherTodayAgendas();
+  const { schedules, agendas: todayAgendas } = await getTeacherAgendaDashboard();
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -35,11 +16,7 @@ export default async function TeacherAgendaPage() {
         </p>
       </div>
 
-      <TeacherAgendaClient
-        teacher={currentUser}
-        classrooms={classrooms}
-        initialAgendas={todayAgendas}
-      />
+      <TeacherAgendaClient schedules={schedules} initialAgendas={todayAgendas} />
     </div>
   );
 }

@@ -1,8 +1,9 @@
 export const instant = false;
 import { prisma } from '@/lib/prisma';
-import { Search, UserPlus, MoreVertical, GraduationCap, Mail } from 'lucide-react';
+import { Search, UserPlus, MoreVertical, Mail } from 'lucide-react';
 import { getSessionUserId } from '@/lib/auth';
 import ImportForm from './ImportForm';
+import DemoDataImportForm from './DemoDataImportForm';
 
 
 export default async function StudentsPage() {
@@ -59,6 +60,7 @@ export default async function StudentsPage() {
       </div>
 
       {(isAdmin || isTU) && <ImportForm />}
+      {(isAdmin || isTU) && <DemoDataImportForm />}
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="p-4 sm:p-6 border-b border-slate-100 flex items-center justify-between">

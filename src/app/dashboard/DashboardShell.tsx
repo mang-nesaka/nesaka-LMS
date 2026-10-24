@@ -7,7 +7,7 @@ import {
   LayoutDashboard, BookOpen, Users, FileText, Settings, 
   LogOut, Menu, FileSpreadsheet, Laptop, GraduationCap, 
   IdCard, ChevronRight, FileUp, FileCheck, Camera, QrCode, 
-  School, BarChart3, Radio, FileSignature, AlertCircle, MapPin
+  School, BarChart3, Radio, FileSignature, AlertCircle, MapPin, Clock
 } from 'lucide-react';
 import { useState } from 'react';
 import { logout } from '@/app/actions/auth';
@@ -48,7 +48,7 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
     if (user.role === 'TEACHER') {
       return [
         { name: 'Dashboard Guru', href: '/dashboard', icon: LayoutDashboard },
-        { name: 'Scan Barcode & Agenda', href: '/dashboard/teacher-agenda', icon: QrCode },
+        { name: 'Scan Kelas', href: '/dashboard/teacher-agenda', icon: QrCode },
         { name: 'Kelola Kelas', href: '/dashboard/courses', icon: BookOpen },
         { name: 'Tugas & Penilaian', href: '/dashboard/assignments', icon: FileText },
         { name: 'Ujian CBT', href: '/dashboard/exams', icon: Laptop },
@@ -62,7 +62,6 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
       return [
         { name: 'Dashboard Wali Kelas', href: '/dashboard', icon: LayoutDashboard },
         { name: 'Rekap Kehadiran Siswa', href: '/dashboard/walikelas', icon: BarChart3 },
-        { name: 'Scan Barcode & Agenda', href: '/dashboard/teacher-agenda', icon: QrCode },
         { name: 'Kelas Pembelajaran', href: '/dashboard/courses', icon: BookOpen },
         { name: 'Tugas & Penilaian', href: '/dashboard/assignments', icon: FileText },
         { name: 'Ujian CBT', href: '/dashboard/exams', icon: Laptop },
@@ -80,6 +79,7 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
         { name: 'Rekap Dapodik (F-PD)', href: '/dashboard/dapodik', icon: FileSpreadsheet },
         { name: 'Koreksi Data Diri Siswa', href: '/dashboard/tu/corrections', icon: AlertCircle },
         { name: 'Cetak Barcode Ruang Kelas', href: '/dashboard/classrooms', icon: QrCode },
+        { name: 'Jadwal Mengajar', href: '/dashboard/classrooms/schedules', icon: Clock },
         { name: 'Pengaturan GPS & Jam Sekolah', href: '/dashboard/settings/school', icon: MapPin },
         { name: 'Profil Saya', href: '/dashboard/profile', icon: IdCard },
         { name: 'Pengaturan Akun', href: '/dashboard/settings', icon: Settings },
@@ -147,13 +147,13 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
       { name: 'Monitoring Guru Real-Time', href: '/dashboard/monitoring', icon: Radio },
       { name: 'Presensi GPS Siswa', href: '/dashboard/attendance', icon: Camera },
       { name: 'Rekap Presensi Siswa', href: '/dashboard/walikelas', icon: BarChart3 },
-      { name: 'Scan Agenda Mengajar', href: '/dashboard/teacher-agenda', icon: QrCode },
       { name: 'Semua Kelas', href: '/dashboard/courses', icon: BookOpen },
       { name: 'Tugas Harian', href: '/dashboard/assignments', icon: FileText },
       { name: 'Ujian CBT', href: '/dashboard/exams', icon: Laptop },
       { name: 'Rekap Nilai CBT', href: '/dashboard/exams/recap', icon: Laptop },
       { name: 'Berita Acara Kegiatan', href: '/dashboard/berita-acara', icon: FileSignature },
       { name: 'Barcode Ruang Kelas', href: '/dashboard/classrooms', icon: QrCode },
+      { name: 'Jadwal Mengajar', href: '/dashboard/classrooms/schedules', icon: Clock },
       { name: 'Manajemen Siswa (TU)', href: '/dashboard/students', icon: Users },
       { name: 'Verifikasi Dokumen (TU)', href: '/dashboard/documents', icon: FileCheck },
       { name: 'Koreksi Data Diri (TU)', href: '/dashboard/tu/corrections', icon: AlertCircle },

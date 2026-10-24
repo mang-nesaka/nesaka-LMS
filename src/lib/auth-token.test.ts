@@ -19,7 +19,7 @@ describe('signed auth tokens', () => {
 
     expect(verifyAuthToken(`${token}x`, 1_800_000_100)).toBeNull();
     expect(verifyAuthToken(token, 1_800_000_000 + 60 * 60 * 24 * 7 + 1)).toBeNull();
-    expect(verifyAuthToken('user_123')).toBeNull();
+    expect(verifyAuthToken('user_123', 1_800_000_100)).toBeNull();
   });
 
   it('rejects tokens issued in the future', () => {

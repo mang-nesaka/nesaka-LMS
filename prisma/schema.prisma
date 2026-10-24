@@ -31,6 +31,7 @@ model User {
   documents          StudentDocument[]
   attendances        StudentAttendance[]
   teacherAgendas     TeacherClassAgenda[]
+  classSchedules     ClassTeachingSchedule[]
   correctionRequests DataCorrectionRequest[]
   activityReports    ActivityReport[]
 }
@@ -294,12 +295,34 @@ model Classroom {
   createdAt    DateTime             @default(now())
 
   agendas      TeacherClassAgenda[]
+  schedules    ClassTeachingSchedule[]
+}
+
+model ClassTeachingSchedule {
+  id          String   @id @default(cuid())
+  teacherId   String
+  classroomId String
+  subject     String
+  dayOfWeek   Int
+  startTime   String
+  endTime     String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  teacher    User                @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  classroom  Classroom           @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  agendas    TeacherClassAgenda[]
+
+  @@index([teacherId, dayOfWeek, isActive])
+  @@index([classroomId, dayOfWeek, isActive])
 }
 
 model TeacherClassAgenda {
   id                  String    @id @default(cuid())
   teacherId           String
   classroomId         String
+  classScheduleId     String?
   subject             String
   scheduledStartTime  String    // e.g. "07:30"
   scheduledEndTime    String    // e.g. "09:30"
@@ -313,6 +336,10 @@ model TeacherClassAgenda {
 
   teacher             User      @relation(fields: [teacherId], references: [id], onDelete: Cascade)
   classroom           Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+
+  classSchedule       ClassTeachingSchedule? @relation(fields: [classScheduleId], references: [id], onDelete: SetNull)
+
+  @@unique([classScheduleId, date])
 }
 
 model DataCorrectionRequest {

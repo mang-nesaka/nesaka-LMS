@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { updateProfile } from '@/app/actions/settings';
 import { Save, User, Lock, AlertCircle, CheckCircle2 } from 'lucide-react';
 
-export default function SettingsForm({ user }: { user: any }) {
+export default function SettingsForm({ user }: { user: { id: string; name: string; email: string; role: string } }) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'error'|'success', text: string } | null>(null);
 
@@ -70,9 +70,12 @@ export default function SettingsForm({ user }: { user: any }) {
               type="text"
               defaultValue={user.name}
               required
-              className="block w-full pl-10 pr-3 py-2 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-slate-50 focus:bg-white"
+              readOnly
+              aria-readonly="true"
+              className="block w-full pl-10 pr-3 py-2 border border-slate-200 rounded-xl text-slate-600 bg-slate-100 cursor-not-allowed"
             />
           </div>
+          <p className="text-xs text-slate-400 mt-1">Nama Lengkap dikunci dan tidak dapat diubah dari Pengaturan Akun.</p>
         </div>
 
         <div className="pt-4 border-t border-slate-100">

@@ -14,12 +14,12 @@ function sign(payload: string): string {
   return createHmac('sha256', getSigningSecret()).update(payload).digest('base64url');
 }
 
-export function createAuthToken(userId: string, issuedAt = Math.floor(Date.now() / 1000)): string {
+export function createAuthToken(userId: string, issuedAt: number): string {
   const payload = `${userId}.${issuedAt}`;
   return `${payload}.${sign(payload)}`;
 }
 
-export function verifyAuthToken(token: string, now = Math.floor(Date.now() / 1000)): string | null {
+export function verifyAuthToken(token: string, now: number): string | null {
   const parts = token.split('.');
   if (parts.length !== 3) return null;
 

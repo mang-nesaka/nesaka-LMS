@@ -1,39 +1,91 @@
 "use client";
 
-import { useState } from 'react';
-import { QrCode, BookOpen, Clock, AlertTriangle, CheckCircle, School, FileText, Check } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { BrowserMultiFormatReader, type IScannerControls } from '@zxing/browser';
+import { QrCode, BookOpen, AlertTriangle, CheckCircle, School, FileText, Check, Camera, X } from 'lucide-react';
 import { scanBarcodeAndSubmitAgenda } from '@/app/actions/agenda';
 
-interface Props {
-  teacher: {
-    id: string;
-    name: string;
-    email: string;
-    role: string;
-  };
-  classrooms: Array<{ id: string; name: string; code: string; level: string }>;
-  initialAgendas: any[];
+interface ClassSchedule {
+  id: string;
+  subject: string;
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+  classroom: { name: string; code: string };
 }
 
-export default function TeacherAgendaClient({ teacher, classrooms, initialAgendas }: Props) {
+interface AgendaRow {
+  id: string;
+  classScheduleId: string | null;
+  classroom: { name: string };
+  subject: string;
+  isLate: boolean;
+  lateMinutes: number;
+  teachingMaterial: string;
+  scheduledStartTime: string;
+  scheduledEndTime: string;
+  scanTime: Date | string;
+}
+
+export default function TeacherAgendaClient({ schedules, initialAgendas }: { schedules: ClassSchedule[]; initialAgendas: AgendaRow[] }) {
   const [barcodeCode, setBarcodeCode] = useState('');
-  const [subject, setSubject] = useState('');
-  const [scheduledStartTime, setScheduledStartTime] = useState('07:30');
-  const [scheduledEndTime, setScheduledEndTime] = useState('09:30');
   const [teachingMaterial, setTeachingMaterial] = useState('');
   const [notes, setNotes] = useState('');
+  const [isScanning, setIsScanning] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [resultMessage, setResultMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [agendas, setAgendas] = useState(initialAgendas);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const scannerControlsRef = useRef<IScannerControls | null>(null);
+  const hasScannedRef = useRef(false);
+
+  const stopScanner = () => {
+    scannerControlsRef.current?.stop();
+    scannerControlsRef.current = null;
+    setIsScanning(false);
+  };
+
+  useEffect(() => () => scannerControlsRef.current?.stop(), []);
+
+  const startScanner = async () => {
+    if (!videoRef.current) return;
+    hasScannedRef.current = false;
+    setResultMessage(null);
+    setIsScanning(true);
+    try {
+      const reader = new BrowserMultiFormatReader();
+      const controls = await reader.decodeFromConstraints(
+        { video: { facingMode: { ideal: 'environment' } }, audio: false },
+        videoRef.current,
+        (result, _error, currentControls) => {
+          scannerControlsRef.current = currentControls;
+          if (!result || hasScannedRef.current) return;
+          hasScannedRef.current = true;
+          setBarcodeCode(result.getText());
+          setResultMessage({ type: 'success', text: 'QR ruang terbaca. Isi materi lalu simpan agenda.' });
+          currentControls.stop();
+          scannerControlsRef.current = null;
+          setIsScanning(false);
+        },
+      );
+      scannerControlsRef.current = controls;
+    } catch (error) {
+      setIsScanning(false);
+      setResultMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'Kamera gagal dibuka. Periksa izin kamera browser.',
+      });
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!barcodeCode) {
-      alert('Pilih atau masukkan Barcode Kelas terlebih dahulu!');
+      setResultMessage({ type: 'error', text: 'Scan QR ruang kelas terlebih dahulu.' });
       return;
     }
-    if (!subject || !teachingMaterial) {
-      alert('Harap isi Mata Pelajaran dan Materi yang diajarkan!');
+    if (!teachingMaterial.trim()) {
+      setResultMessage({ type: 'error', text: 'Materi yang diajarkan wajib diisi.' });
       return;
     }
 
@@ -43,9 +95,6 @@ export default function TeacherAgendaClient({ teacher, classrooms, initialAgenda
     try {
       const res = await scanBarcodeAndSubmitAgenda({
         barcodeCode,
-        subject,
-        scheduledStartTime,
-        scheduledEndTime,
         teachingMaterial,
         notes,
       });
@@ -57,11 +106,15 @@ export default function TeacherAgendaClient({ teacher, classrooms, initialAgenda
         if (res.agenda) {
           setAgendas([res.agenda, ...agendas]);
         }
+        setBarcodeCode('');
         setTeachingMaterial('');
         setNotes('');
       }
-    } catch (err: any) {
-      setResultMessage({ type: 'error', text: err.message || 'Terjadi kesalahan saat memproses agenda.' });
+    } catch (err) {
+      setResultMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Terjadi kesalahan saat memproses agenda.',
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -94,80 +147,46 @@ export default function TeacherAgendaClient({ teacher, classrooms, initialAgenda
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Barcode Ruang Kelas */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-              Scan / Pilih Barcode Ruang Kelas
-            </label>
+          <section className="rounded-xl border border-slate-200 p-4 space-y-2">
+            <h3 className="text-xs font-bold uppercase tracking-wide text-slate-700">Jadwal Hari Ini</h3>
+            {schedules.length ? schedules.map((schedule) => {
+              const scanned = agendas.some((agenda) => agenda.classScheduleId === schedule.id);
+              return (
+                <div key={schedule.id} className="flex items-center justify-between gap-3 border-t border-slate-100 pt-2 text-sm">
+                  <div>
+                    <p className="font-semibold text-slate-800">{schedule.startTime}–{schedule.endTime} · {schedule.classroom.name}</p>
+                    <p className="text-xs text-slate-500">{schedule.subject}</p>
+                  </div>
+                  <span className={`text-xs font-semibold ${scanned ? 'text-emerald-700' : 'text-slate-500'}`}>
+                    {scanned ? 'Sudah discan' : 'Menunggu scan'}
+                  </span>
+                </div>
+              );
+            }) : <p className="text-sm text-slate-500">Tidak ada jadwal hari ini. Hubungi TU untuk memeriksa jadwal.</p>}
+          </section>
+
+          <div className="space-y-3">
+            <video ref={videoRef} className={`w-full aspect-video rounded-xl bg-slate-950 object-cover ${isScanning ? 'block' : 'hidden'}`} muted playsInline />
             <div className="flex gap-2">
-              <input
-                type="text"
-                required
-                value={barcodeCode}
-                onChange={(e) => setBarcodeCode(e.target.value)}
-                placeholder="Contoh: NESAKA-X-RPL-1"
-                className="flex-1 px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-mono focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-              />
-              <select
-                onChange={(e) => setBarcodeCode(e.target.value)}
-                value={barcodeCode}
-                className="px-3 py-2.5 border border-slate-200 rounded-xl text-xs font-semibold bg-slate-50 text-slate-700 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-              >
-                <option value="">-- Pilih Kelas --</option>
-                {classrooms.map((c) => (
-                  <option key={c.id} value={c.code}>
-                    {c.name} ({c.code})
-                  </option>
-                ))}
-              </select>
+              {!isScanning ? (
+                <button type="button" disabled={!schedules.length} onClick={startScanner} className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-4 py-3 text-sm font-bold text-white disabled:opacity-50">
+                  <Camera className="w-4 h-4" /> Buka Kamera & Scan QR
+                </button>
+              ) : (
+                <button type="button" onClick={stopScanner} className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-slate-700 px-4 py-3 text-sm font-bold text-white">
+                  <X className="w-4 h-4" /> Tutup Kamera
+                </button>
+              )}
             </div>
-            <p className="text-[11px] text-slate-400 mt-1">
-              * Arahkan scanner barcode ke kode QR di kelas atau pilih dari daftar kelas di atas.
-            </p>
-          </div>
-
-          {/* Mata Pelajaran */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-              Mata Pelajaran
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider space-y-1.5">
+              Kode QR Terbaca
+              <input readOnly value={barcodeCode} placeholder="Belum discan" className="w-full px-4 py-2.5 border border-slate-200 rounded-xl bg-slate-50 text-sm font-mono normal-case" />
             </label>
-            <input
-              type="text"
-              required
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              placeholder="Contoh: Pemrograman Web, Matematika, Bahasa Indonesia"
-              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-            />
           </div>
 
-          {/* Waktu Jadwal */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                Jadwal Mulai Kelas
-              </label>
-              <input
-                type="time"
-                required
-                value={scheduledStartTime}
-                onChange={(e) => setScheduledStartTime(e.target.value)}
-                className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                Jadwal Selesai Kelas
-              </label>
-              <input
-                type="time"
-                required
-                value={scheduledEndTime}
-                onChange={(e) => setScheduledEndTime(e.target.value)}
-                className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-              />
-            </div>
-          </div>
+          <p className="text-[11px] text-amber-700 bg-amber-50 p-2 rounded-xl border border-amber-200">
+            Sistem mengambil mata pelajaran dan jam dari jadwal TU/Admin, lalu mencatat keterlambatan berdasarkan waktu scan.
+          </p>
           <p className="text-[11px] text-amber-700 bg-amber-50 p-2 rounded-xl border border-amber-200">
             ⚠️ Sistem otomatis mencatat waktu saat ini. Jika Anda memindai barcode melewati jadwal mulai, sistem akan merekam menit keterlambatan Anda.
           </p>
