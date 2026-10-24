@@ -261,7 +261,7 @@ export default function DigitalStudentCard({ data }: { data: StudentCardData }) 
                   </div>
                   <div>
                     <h3 className="text-xs sm:text-sm font-extrabold tracking-wider uppercase leading-tight text-yellow-300">
-                      SMA NEGERI 1 PURWAKARTA
+                      SMK NEGERI 1 KANDANGHAUR
                     </h3>
                     <p className="text-[10px] text-blue-200 uppercase tracking-widest font-semibold">
                       {isStudent ? 'KARTU TANDA PELAJAR DIGITAL' : 'KARTU IDENTITAS PENDIDIK'}
@@ -387,7 +387,7 @@ export default function DigitalStudentCard({ data }: { data: StudentCardData }) 
                   {/* Stempel Bulat Sekolah (Watermark Effect) */}
                   <div className="w-10 h-10 rounded-full border-2 border-blue-400/80 p-0.5 flex items-center justify-center text-center rotate-[-12deg] text-blue-300 shadow-sm shrink-0">
                     <span className="text-[6px] font-black leading-none uppercase">
-                      SMAN 1<br/>PWK<br/>★ RESMI ★
+                      SMKN 1<br/>KDH<br/>★ RESMI ★
                     </span>
                   </div>
                 </div>
@@ -405,13 +405,13 @@ export default function DigitalStudentCard({ data }: { data: StudentCardData }) 
                   KETENTUAN PEMEGANG KARTU PELAJAR
                 </span>
                 <span className="text-[9px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
-                  SMA NEGERI 1 PURWAKARTA
+                  SMKN 1 KANDANGHAUR
                 </span>
               </div>
 
               {/* Tata Tertib */}
               <div className="space-y-1.5 my-auto text-[9px] sm:text-[10px] text-slate-600 leading-relaxed">
-                <p>1. Kartu ini adalah tanda bukti pengenal sah siswa SMA Negeri 1 Purwakarta.</p>
+                <p>1. Kartu ini adalah tanda bukti pengenal sah siswa SMK Negeri 1 Kandanghaur.</p>
                 <p>2. Wajib dibawa saat pembelajaran di kelas, peminjaman perpustakaan, dan pelaksanaan Ujian CBT.</p>
                 <p>3. Dilarang merusak, memindahtangankan, atau mencoret-coret kartu tanda pelajar ini.</p>
                 <p>4. Apabila kartu ini hilang atau rusak, segera melapor ke bagian Tata Usaha (TU) sekolah.</p>
@@ -421,9 +421,9 @@ export default function DigitalStudentCard({ data }: { data: StudentCardData }) 
               {/* Barcode Strip & Alamat Sekolah */}
               <div className="border-t border-slate-200 pt-2 flex flex-col sm:flex-row items-center justify-between gap-2">
                 <div className="text-[8px] text-slate-500 leading-tight text-center sm:text-left">
-                  <p className="font-bold text-slate-700">SMA NEGERI 1 PURWAKARTA (NESAKA)</p>
+                  <p className="font-bold text-slate-700">SMKN 1 KANDANGHAUR (NESAKA)</p>
                   <p>Jl. K.K Singawinata No. 83, Nagri Kidul, Purwakarta, Jawa Barat</p>
-                  <p>Telp: (0264) 200142 • Website: www.sman1purwakarta.sch.id</p>
+                  <p>Telp: (0264) 200142 • Website: www.smkn1kandanghaur.sch.id</p>
                 </div>
 
                 {/* Barcode Visual Lines */}
