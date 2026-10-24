@@ -252,8 +252,8 @@ model StudentDocument {
 model SchoolSetting {
   id                 String   @id @default("default")
   schoolName         String   @default("SMK Nesaka")
-  schoolLat          Float    @default(-6.9175)
-  schoolLng          Float    @default(107.6191)
+  schoolLat          Float    @default(-6.346129)
+  schoolLng          Float    @default(108.099104)
   radiusMeters       Float    @default(200.0)
   checkInStartTime   String   @default("06:30")
   checkInLateTime    String   @default("07:00")

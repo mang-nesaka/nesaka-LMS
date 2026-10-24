@@ -23,6 +23,7 @@ export default async function SchoolSettingPage() {
     redirect('/dashboard');
   }
 
+  const isAdmin = currentUser.role === 'ADMIN';
   const setting = await getSchoolSetting();
 
   return (
@@ -74,6 +75,7 @@ export default async function SchoolSettingPage() {
                   name="schoolLat"
                   defaultValue={setting.schoolLat}
                   required
+                  readOnly={!isAdmin}
                   className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                 />
               </div>
@@ -88,9 +90,15 @@ export default async function SchoolSettingPage() {
                   name="schoolLng"
                   defaultValue={setting.schoolLng}
                   required
+                  readOnly={!isAdmin}
                   className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                 />
               </div>
+              {!isAdmin && (
+                <p className="text-[11px] text-slate-500">
+                  Hanya Admin yang dapat mengubah koordinat lokasi sekolah.
+                </p>
+              )}
             </div>
 
             <div>

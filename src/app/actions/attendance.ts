@@ -2,24 +2,18 @@
 
 import { PrismaClient } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
+import { cookies } from 'next/headers';
+import {
+  calculateDistanceMeters,
+  canUpdateSchoolLocation,
+  DEFAULT_SCHOOL_LOCATION,
+  getSchoolCoordinatesForUpdate,
+  isLegacySchoolLocation,
+  isValidCoordinate,
+  isWithinAttendanceRadius,
+} from '@/lib/attendance';
 
 const prisma = new PrismaClient();
-
-// Haversine formula to calculate distance in meters between two coordinates
-function calculateDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371e3; // Earth radius in meters
-  const phi1 = (lat1 * Math.PI) / 180;
-  const phi2 = (lat2 * Math.PI) / 180;
-  const deltaPhi = ((lat2 - lat1) * Math.PI) / 180;
-  const deltaLambda = ((lon2 - lon1) * Math.PI) / 180;
-
-  const a =
-    Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
-    Math.cos(phi1) * Math.cos(phi2) * Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-  return Math.round(R * c);
-}
 
 // Format local date YYYY-MM-DD
 function getLocalDateString(): string {
@@ -43,12 +37,20 @@ export async function getSchoolSetting() {
       data: {
         id: 'default',
         schoolName: 'SMK Nesaka (SMKN 1)',
-        schoolLat: -6.9175,
-        schoolLng: 107.6191,
+        schoolLat: DEFAULT_SCHOOL_LOCATION.lat,
+        schoolLng: DEFAULT_SCHOOL_LOCATION.lng,
         radiusMeters: 200.0,
         checkInStartTime: '06:30',
         checkInLateTime: '07:00',
         checkOutStartTime: '15:00',
+      },
+    });
+  } else if (isLegacySchoolLocation(setting.schoolLat, setting.schoolLng)) {
+    setting = await prisma.schoolSetting.update({
+      where: { id: 'default' },
+      data: {
+        schoolLat: DEFAULT_SCHOOL_LOCATION.lat,
+        schoolLng: DEFAULT_SCHOOL_LOCATION.lng,
       },
     });
   }
@@ -57,9 +59,39 @@ export async function getSchoolSetting() {
 }
 
 export async function updateSchoolSetting(formData: FormData) {
+  const cookieStore = await cookies();
+  const userId = cookieStore.get('auth_token')?.value;
+
+  if (!userId) {
+    throw new Error('Sesi login telah habis. Silakan login kembali.');
+  }
+
+  const currentUser = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { role: true },
+  });
+
+  if (!currentUser || !['TU', 'ADMIN'].includes(currentUser.role)) {
+    throw new Error('Akses ditolak. Hanya TU atau Admin yang dapat mengubah pengaturan sekolah.');
+  }
+
+  const currentSetting = await getSchoolSetting();
   const schoolName = formData.get('schoolName') as string;
-  const schoolLat = parseFloat(formData.get('schoolLat') as string);
-  const schoolLng = parseFloat(formData.get('schoolLng') as string);
+  const submittedLat = Number(formData.get('schoolLat'));
+  const submittedLng = Number(formData.get('schoolLng'));
+  const isAdmin = canUpdateSchoolLocation(currentUser.role);
+  const coordinates = getSchoolCoordinatesForUpdate(
+    currentUser.role,
+    { lat: submittedLat, lng: submittedLng },
+    { lat: currentSetting.schoolLat, lng: currentSetting.schoolLng },
+  );
+  const schoolLat = coordinates.lat;
+  const schoolLng = coordinates.lng;
+
+  if (isAdmin && !isValidCoordinate(schoolLat, schoolLng)) {
+    throw new Error('Koordinat sekolah tidak valid.');
+  }
+
   const radiusMeters = parseFloat(formData.get('radiusMeters') as string) || 200.0;
   const checkInStartTime = formData.get('checkInStartTime') as string || '06:30';
   const checkInLateTime = formData.get('checkInLateTime') as string || '07:00';
@@ -120,13 +152,21 @@ export async function submitStudentAttendance(data: {
   const setting = await getSchoolSetting();
 
   // 1. Validasi Radius Geolocation
-  const distanceMeters = calculateDistanceMeters(lat, lng, setting.schoolLat, setting.schoolLng);
+  if (!isWithinAttendanceRadius(lat, lng, setting.schoolLat, setting.schoolLng, setting.radiusMeters)) {
+    const validCoordinates = isValidCoordinate(lat, lng) &&
+      isValidCoordinate(setting.schoolLat, setting.schoolLng);
+    const distanceMeters = validCoordinates
+      ? calculateDistanceMeters(lat, lng, setting.schoolLat, setting.schoolLng)
+      : Number.NaN;
 
-  if (distanceMeters > setting.radiusMeters) {
     return {
-      error: `Presensi Ditolak! Anda berada di luar radius sekolah. Jarak Anda saat ini: ${distanceMeters} meter (Maksimal diperbolehkan: ${setting.radiusMeters} meter).`,
+      error: Number.isFinite(distanceMeters)
+        ? `Presensi Ditolak! Anda berada di luar radius sekolah. Jarak Anda saat ini: ${distanceMeters} meter (Maksimal diperbolehkan: ${setting.radiusMeters} meter).`
+        : 'Presensi Ditolak! Koordinat lokasi Anda tidak valid.',
     };
   }
+
+  const distanceMeters = calculateDistanceMeters(lat, lng, setting.schoolLat, setting.schoolLng);
 
   // Waktu sekarang WIB
   const now = new Date();
