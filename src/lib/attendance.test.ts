@@ -4,6 +4,7 @@ import {
   calculateDistanceMeters,
   DEFAULT_SCHOOL_LOCATION,
   getSchoolCoordinatesForUpdate,
+  getNextAttendanceType,
   isLegacySchoolLocation,
   isValidCoordinate,
   isWithinAttendanceRadius,
@@ -68,5 +69,12 @@ describe('attendance location rules', () => {
 
     expect(getSchoolCoordinatesForUpdate('TU', submitted, current)).toEqual(current);
     expect(getSchoolCoordinatesForUpdate('ADMIN', submitted, current)).toEqual(submitted);
+  });
+
+  it('selects the next attendance action from the existing record', () => {
+    expect(getNextAttendanceType(null)).toBe('IN');
+    expect(getNextAttendanceType({ checkInTime: null, checkOutTime: null })).toBe('IN');
+    expect(getNextAttendanceType({ checkInTime: new Date(), checkOutTime: null })).toBe('OUT');
+    expect(getNextAttendanceType({ checkInTime: new Date(), checkOutTime: new Date() })).toBeNull();
   });
 });

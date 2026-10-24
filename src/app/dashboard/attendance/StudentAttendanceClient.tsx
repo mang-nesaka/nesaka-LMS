@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { Camera, MapPin, CheckCircle, AlertTriangle, Clock, RefreshCw, UserCheck, ShieldAlert } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Camera, MapPin, CheckCircle, AlertTriangle, Clock, RefreshCw, ShieldAlert } from 'lucide-react';
 import { submitStudentAttendance } from '@/app/actions/attendance';
+import { getNextAttendanceType } from '@/lib/attendance';
 
 interface Props {
   student: {
@@ -31,6 +33,7 @@ interface Props {
 }
 
 export default function StudentAttendanceClient({ student, attendance, setting, today }: Props) {
+  const router = useRouter();
   const [photo, setPhoto] = useState<string | null>(null);
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -111,7 +114,7 @@ export default function StudentAttendanceClient({ student, attendance, setting, 
 
   // Take Snapshot
   const capturePhoto = () => {
-    if (videoRef.current && canvasRef.current) {
+    if (getNextAttendanceType(attendance) && videoRef.current && canvasRef.current) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
       canvas.width = video.videoWidth || 640;
@@ -122,6 +125,7 @@ export default function StudentAttendanceClient({ student, attendance, setting, 
         const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
         setPhoto(dataUrl);
         stopCamera();
+        void handleSubmit(dataUrl);
       }
     }
   };
@@ -133,20 +137,23 @@ export default function StudentAttendanceClient({ student, attendance, setting, 
   };
 
   // Submit Attendance (IN or OUT)
-  const handleSubmit = async (type: 'IN' | 'OUT') => {
-    if (!photo) {
-      alert('Harap ambil foto selfie kehadiran Anda terlebih dahulu!');
+  const handleSubmit = async (capturedPhoto = photo) => {
+    if (!capturedPhoto) {
+      setSubmitMessage({ type: 'error', text: 'Foto selfie belum tersedia.' });
       return;
     }
     if (!location) {
-      alert(navigator.geolocation
+      setSubmitMessage({ type: 'error', text: navigator.geolocation
         ? 'Lokasi GPS belum terdeteksi. Pastikan GPS aktif dan izin lokasi telah disetujui.'
-        : 'Perangkat Anda tidak mendukung fitur GPS Geolocation.');
+        : 'Perangkat Anda tidak mendukung fitur GPS Geolocation.' });
       return;
     }
 
     if (distance !== null && distance > setting.radiusMeters) {
-      alert(`Presensi Ditolak! Anda berada di luar jangkauan radius sekolah (${distance}m dari maksimal ${setting.radiusMeters}m).`);
+      setSubmitMessage({
+        type: 'error',
+        text: `Presensi ditolak. Jarak Anda ${distance}m, di luar radius ${setting.radiusMeters}m.`,
+      });
       return;
     }
 
@@ -155,16 +162,16 @@ export default function StudentAttendanceClient({ student, attendance, setting, 
 
     try {
       const res = await submitStudentAttendance({
-        type,
         lat: location.lat,
         lng: location.lng,
-        photoBase64: photo,
+        photoBase64: capturedPhoto,
       });
 
       if (res.error) {
         setSubmitMessage({ type: 'error', text: res.error });
       } else {
         setSubmitMessage({ type: 'success', text: res.message || 'Presensi berhasil dicatat!' });
+        router.refresh();
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Terjadi kesalahan sistem saat menyimpan presensi.';
@@ -175,6 +182,8 @@ export default function StudentAttendanceClient({ student, attendance, setting, 
   };
 
   const isWithinRadius = distance !== null && distance <= setting.radiusMeters;
+  const nextAttendanceType = getNextAttendanceType(attendance);
+  const nextAttendanceLabel = nextAttendanceType === 'IN' ? 'MASUK' : 'PULANG';
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -205,7 +214,7 @@ export default function StudentAttendanceClient({ student, attendance, setting, 
 
           {/* Action Buttons Kamera */}
           <div className="mt-4 flex gap-3">
-            {!photo && !isCameraActive && (
+            {nextAttendanceType && !photo && !isCameraActive && (
               <button
                 type="button"
                 onClick={startCamera}
@@ -216,21 +225,23 @@ export default function StudentAttendanceClient({ student, attendance, setting, 
               </button>
             )}
 
-            {!photo && isCameraActive && (
+            {nextAttendanceType && !photo && isCameraActive && (
               <button
                 type="button"
                 onClick={capturePhoto}
+                disabled={isSubmitting}
                 className="flex-1 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-xs transition-colors flex items-center justify-center gap-2 shadow-sm"
               >
                 <CheckCircle className="w-4 h-4" />
-                <span>Ambil Foto Sekarang</span>
+                <span>{isSubmitting ? 'Mengirim Presensi...' : `Ambil Foto & Presensi ${nextAttendanceLabel}`}</span>
               </button>
             )}
 
-            {photo && (
+            {nextAttendanceType && photo && (
               <button
                 type="button"
                 onClick={retakePhoto}
+                disabled={isSubmitting}
                 className="flex-1 py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs transition-colors flex items-center justify-center gap-2"
               >
                 <RefreshCw className="w-4 h-4" />
@@ -318,43 +329,13 @@ export default function StudentAttendanceClient({ student, attendance, setting, 
             </div>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-            {/* Tombol Presensi Masuk */}
-            <button
-              type="button"
-              disabled={isSubmitting || !photo || !isWithinRadius}
-              onClick={() => handleSubmit('IN')}
-              className={`py-3.5 px-4 rounded-2xl font-bold text-xs sm:text-sm flex flex-col items-center justify-center gap-1 transition-all shadow-sm ${
-                isSubmitting || !photo || !isWithinRadius
-                  ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
-                  : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white hover:shadow-md hover:scale-[1.02]'
-              }`}
-            >
-              <UserCheck className="w-5 h-5" />
-              <span>PRESENSI MASUK</span>
-              <span className="text-[10px] font-normal opacity-80">(Mulai 06:30 | &gt;= 07:00 Terlambat)</span>
-            </button>
-
-            {/* Tombol Presensi Pulang */}
-            <button
-              type="button"
-              disabled={isSubmitting || !photo || !isWithinRadius}
-              onClick={() => handleSubmit('OUT')}
-              className={`py-3.5 px-4 rounded-2xl font-bold text-xs sm:text-sm flex flex-col items-center justify-center gap-1 transition-all shadow-sm ${
-                isSubmitting || !photo || !isWithinRadius
-                  ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
-                  : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white hover:shadow-md hover:scale-[1.02]'
-              }`}
-            >
-              <Clock className="w-5 h-5" />
-              <span>PRESENSI PULANG</span>
-              <span className="text-[10px] font-normal opacity-80">(Mulai 15:00 | &lt; 15:00 Bolos)</span>
-            </button>
-          </div>
-
-          {(!photo || !isWithinRadius) && (
+          {nextAttendanceType ? (
             <p className="text-[11px] text-slate-400 text-center italic">
-              * Tombol presensi aktif setelah mengambil foto selfie dan GPS berada dalam radius 200m sekolah.
+              Foto langsung dikirim sebagai presensi {nextAttendanceLabel.toLowerCase()}. GPS tetap harus berada dalam radius sekolah.
+            </p>
+          ) : (
+            <p className="text-[11px] text-emerald-700 text-center font-semibold">
+              Presensi masuk dan pulang hari ini sudah tercatat.
             </p>
           )}
         </div>

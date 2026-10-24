@@ -67,3 +67,11 @@ export function getSchoolCoordinatesForUpdate(
 ): { lat: number; lng: number } {
   return canUpdateSchoolLocation(role) ? submitted : current;
 }
+
+export function getNextAttendanceType(
+  attendance: { checkInTime: Date | null; checkOutTime: Date | null } | null,
+): 'IN' | 'OUT' | null {
+  if (!attendance?.checkInTime) return 'IN';
+  if (!attendance.checkOutTime) return 'OUT';
+  return null;
+}

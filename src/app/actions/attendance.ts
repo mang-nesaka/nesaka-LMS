@@ -11,6 +11,7 @@ import {
   isLegacySchoolLocation,
   isValidCoordinate,
   isWithinAttendanceRadius,
+  getNextAttendanceType,
 } from '@/lib/attendance';
 import { requireRole } from '@/lib/auth';
 
@@ -138,18 +139,23 @@ export async function getStudentTodayAttendance() {
 }
 
 export async function submitStudentAttendance(data: {
-  type: 'IN' | 'OUT';
   lat: number;
   lng: number;
   photoBase64: string;
 }) {
   const { id: studentId } = await requireRole('STUDENT');
-  const { type, lat, lng, photoBase64 } = data;
-  if (!['IN', 'OUT'].includes(type)) throw new Error('Jenis presensi tidak valid.');
+  const { lat, lng, photoBase64 } = data;
   if (!/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(photoBase64) || photoBase64.length > 1_400_000) {
     throw new Error('Foto presensi tidak valid atau terlalu besar.');
   }
   const dateStr = getLocalDateString();
+  const existingAttendance = await prisma.studentAttendance.findUnique({
+    where: { studentId_date: { studentId, date: dateStr } },
+    select: { checkInTime: true, checkOutTime: true },
+  });
+  const type = getNextAttendanceType(existingAttendance);
+  if (!type) return { error: 'Presensi masuk dan pulang hari ini sudah tercatat.' };
+
   const setting = await getSchoolSetting();
 
   // 1. Validasi Radius Geolocation
