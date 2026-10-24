@@ -11,21 +11,28 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  password  String
-  role      String   @default("STUDENT") // "ADMIN", "TEACHER", or "STUDENT"
-  avatarUrl String?  @db.Text
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  password     String
+  role         String   @default("STUDENT") // "ADMIN", "TEACHER", "STUDENT", "TU", "WALI_KELAS", "WAKA_KURIKULUM", "WAKA_KESISWAAN", "WAKA_SARPRAS", "WAKA_HUBDIN", "KEPSEK"
+  avatarUrl    String?  @db.Text
+  studentClass String?  // e.g. "X RPL 1"
+  waliKelasOf  String?  // e.g. "X RPL 1"
+  nipOrNis     String?  // NIP / NIS
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  coursesAsTeacher Course[]     @relation("TeacherCourses")
-  enrollments      Enrollment[]
-  submissions      Submission[]
-  dapodikForm      DapodikForm?
-  examResults      ExamResult[]
-  documents        StudentDocument[]
+  coursesAsTeacher   Course[]                @relation("TeacherCourses")
+  enrollments        Enrollment[]
+  submissions        Submission[]
+  dapodikForm        DapodikForm?
+  examResults        ExamResult[]
+  documents          StudentDocument[]
+  attendances        StudentAttendance[]
+  teacherAgendas     TeacherClassAgenda[]
+  correctionRequests DataCorrectionRequest[]
+  activityReports    ActivityReport[]
 }
 
 model DapodikForm {
@@ -240,5 +247,100 @@ model StudentDocument {
   student      User      @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@unique([studentId, docType])
+}
+
+model SchoolSetting {
+  id                 String   @id @default("default")
+  schoolName         String   @default("SMK Nesaka")
+  schoolLat          Float    @default(-6.9175)
+  schoolLng          Float    @default(107.6191)
+  radiusMeters       Float    @default(200.0)
+  checkInStartTime   String   @default("06:30")
+  checkInLateTime    String   @default("07:00")
+  checkOutStartTime  String   @default("15:00")
+  updatedAt          DateTime @updatedAt
+}
+
+model StudentAttendance {
+  id                  String    @id @default(cuid())
+  studentId           String
+  date                String    // "YYYY-MM-DD"
+  checkInTime         DateTime?
+  checkInPhoto        String?   @db.Text
+  checkInLat          Float?
+  checkInLng          Float?
+  checkInDistance     Float?
+  checkInStatus       String?   // "HADIR", "TERLAMBAT", "IZIN", "SAKIT", "ALPA"
+  checkInLateMinutes  Int       @default(0)
+  checkOutTime        DateTime?
+  checkOutPhoto       String?   @db.Text
+  checkOutLat         Float?
+  checkOutLng         Float?
+  checkOutStatus      String?   // "PULANG", "BOLOS"
+  notes               String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  student             User      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, date])
+}
+
+model Classroom {
+  id           String               @id @default(cuid())
+  name         String               @unique // e.g. "X RPL 1"
+  code         String               @unique // Barcode/QR token, e.g. "NESAKA-X-RPL-1"
+  level        String               @default("10")
+  createdAt    DateTime             @default(now())
+
+  agendas      TeacherClassAgenda[]
+}
+
+model TeacherClassAgenda {
+  id                  String    @id @default(cuid())
+  teacherId           String
+  classroomId         String
+  subject             String
+  scheduledStartTime  String    // e.g. "07:30"
+  scheduledEndTime    String    // e.g. "09:30"
+  scanTime            DateTime  @default(now())
+  isLate              Boolean   @default(false)
+  lateMinutes         Int       @default(0)
+  teachingMaterial    String    @db.Text
+  notes               String?   @db.Text
+  date                String    // "YYYY-MM-DD"
+  createdAt           DateTime  @default(now())
+
+  teacher             User      @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  classroom           Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+}
+
+model DataCorrectionRequest {
+  id             String    @id @default(cuid())
+  studentId      String
+  status         String    @default("PENDING") // "PENDING", "PROCESSED", "REJECTED"
+  notes          String    @db.Text
+  adminResponse  String?   @db.Text
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  student        User      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+}
+
+model ActivityReport {
+  id                String    @id @default(cuid())
+  authorId          String
+  roleSource        String    // "WAKA_KURIKULUM", "WAKA_KESISWAAN", "WAKA_SARPRAS", "WAKA_HUBDIN"
+  title             String
+  date              DateTime  @default(now())
+  location          String?
+  description       String    @db.Text
+  documentationUrl  String?   @db.Text
+  participants      String?   @db.Text
+  status            String    @default("COMPLETED")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  author            User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
 }
 
