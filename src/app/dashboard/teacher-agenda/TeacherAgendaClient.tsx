@@ -33,6 +33,8 @@ export default function TeacherAgendaClient({ schedules, initialAgendas }: { sch
   const [notes, setNotes] = useState('');
   const [isScanning, setIsScanning] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
   const [resultMessage, setResultMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [agendas, setAgendas] = useState(initialAgendas);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -46,6 +48,37 @@ export default function TeacherAgendaClient({ schedules, initialAgendas }: { sch
   };
 
   useEffect(() => () => scannerControlsRef.current?.stop(), []);
+
+  // Jadwal hari ini yang ruangnya cocok dengan QR yang baru dibaca.
+  const scannedSchedule = barcodeCode
+    ? schedules.find((s) => s.classroom.code.trim().toLowerCase() === barcodeCode.trim().toLowerCase())
+    : undefined;
+
+  const closeModal = () => {
+    if (isSubmitting) return;
+    setIsModalOpen(false);
+    setBarcodeCode('');
+    setModalError(null);
+  };
+
+  // Saat pop-up terbuka: kunci scroll halaman dan izinkan Esc untuk menutup.
+  useEffect(() => {
+    if (!isModalOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !isSubmitting) {
+        setIsModalOpen(false);
+        setBarcodeCode('');
+        setModalError(null);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [isModalOpen, isSubmitting]);
 
   const startScanner = async () => {
     if (!videoRef.current) return;
@@ -61,8 +94,19 @@ export default function TeacherAgendaClient({ schedules, initialAgendas }: { sch
           scannerControlsRef.current = currentControls;
           if (!result || hasScannedRef.current) return;
           hasScannedRef.current = true;
-          setBarcodeCode(result.getText());
-          setResultMessage({ type: 'success', text: 'QR ruang terbaca. Isi materi lalu simpan agenda.' });
+          const scannedText = result.getText();
+          const matchesToday = schedules.some(
+            (item) => item.classroom.code.trim().toLowerCase() === scannedText.trim().toLowerCase(),
+          );
+          if (matchesToday) {
+            setBarcodeCode(scannedText);
+            setResultMessage(null);
+            setModalError(null);
+            setIsModalOpen(true);
+          } else {
+            setBarcodeCode('');
+            setResultMessage({ type: 'error', text: 'QR tidak cocok dengan ruang kelas pada jadwal Anda hari ini. Silakan scan ulang.' });
+          }
           currentControls.stop();
           scannerControlsRef.current = null;
           setIsScanning(false);
@@ -81,15 +125,16 @@ export default function TeacherAgendaClient({ schedules, initialAgendas }: { sch
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!barcodeCode) {
-      setResultMessage({ type: 'error', text: 'Scan QR ruang kelas terlebih dahulu.' });
+      setModalError('Scan QR ruang kelas terlebih dahulu.');
       return;
     }
     if (!teachingMaterial.trim()) {
-      setResultMessage({ type: 'error', text: 'Materi yang diajarkan wajib diisi.' });
+      setModalError('Materi yang diajarkan wajib diisi.');
       return;
     }
 
     setIsSubmitting(true);
+    setModalError(null);
     setResultMessage(null);
 
     try {
@@ -100,21 +145,19 @@ export default function TeacherAgendaClient({ schedules, initialAgendas }: { sch
       });
 
       if (res.error) {
-        setResultMessage({ type: 'error', text: res.error });
+        setModalError(res.error);
       } else {
         setResultMessage({ type: 'success', text: res.message || 'Agenda berhasil disimpan.' });
         if (res.agenda) {
           setAgendas([res.agenda, ...agendas]);
         }
+        setIsModalOpen(false);
         setBarcodeCode('');
         setTeachingMaterial('');
         setNotes('');
       }
     } catch (err) {
-      setResultMessage({
-        type: 'error',
-        text: err instanceof Error ? err.message : 'Terjadi kesalahan saat memproses agenda.',
-      });
+      setModalError(err instanceof Error ? err.message : 'Terjadi kesalahan saat memproses agenda.');
     } finally {
       setIsSubmitting(false);
     }
@@ -146,7 +189,7 @@ export default function TeacherAgendaClient({ schedules, initialAgendas }: { sch
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-4">
           <section className="rounded-xl border border-slate-200 p-4 space-y-2">
             <h3 className="text-xs font-bold uppercase tracking-wide text-slate-700">Jadwal Hari Ini</h3>
             {schedules.length ? schedules.map((schedule) => {
@@ -185,50 +228,12 @@ export default function TeacherAgendaClient({ schedules, initialAgendas }: { sch
           </div>
 
           <p className="text-[11px] text-amber-700 bg-amber-50 p-2 rounded-xl border border-amber-200">
-            Sistem mengambil mata pelajaran dan jam dari jadwal TU/Admin, lalu mencatat keterlambatan berdasarkan waktu scan.
+            Setelah QR ruang terbaca, formulir materi dan catatan akan muncul otomatis.
           </p>
           <p className="text-[11px] text-amber-700 bg-amber-50 p-2 rounded-xl border border-amber-200">
-            ⚠️ Sistem otomatis mencatat waktu saat ini. Jika Anda memindai barcode melewati jadwal mulai, sistem akan merekam menit keterlambatan Anda.
+            ⚠️ Keterlambatan dihitung dari jam jadwal mulai sampai agenda disimpan. Isi materi segera setelah scan.
           </p>
-
-          {/* Materi yang diajarkan */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-              Materi Pelajaran yang Diajarkan Hari Ini
-            </label>
-            <textarea
-              required
-              rows={3}
-              value={teachingMaterial}
-              onChange={(e) => setTeachingMaterial(e.target.value)}
-              placeholder="Tuliskan pokok bahasan, bab materi, atau kegiatan pembelajaran yang disampaikan di kelas..."
-              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-            />
-          </div>
-
-          {/* Catatan / Keterangan Kelas */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-              Catatan / Kejadian di Kelas (Opsional)
-            </label>
-            <input
-              type="text"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Contoh: Siswa aktif, proyektor sempat bermasalah, tugas dikumpulkan di LMS"
-              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold rounded-2xl text-sm shadow-md transition-all flex items-center justify-center gap-2 hover:scale-[1.01]"
-          >
-            <Check className="w-5 h-5" />
-            <span>{isSubmitting ? 'Menyimpan Agenda...' : 'SCAN & SIMPAN AGENDA MENGAJAR'}</span>
-          </button>
-        </form>
+        </div>
       </div>
 
       {/* Riwayat Agenda Guru Hari Ini (1 Kolom) */}
@@ -285,6 +290,103 @@ export default function TeacherAgendaClient({ schedules, initialAgendas }: { sch
           Data agenda ini otomatis terpantau secara real-time oleh <strong>Kepala Sekolah</strong> dan <strong>Waka Kurikulum</strong>.
         </div>
       </div>
+
+      {isModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-slate-900/60 sm:items-center sm:p-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="agenda-dialog-title"
+            className="max-h-[92vh] w-full overflow-y-auto rounded-t-3xl bg-white p-5 shadow-2xl sm:max-w-lg sm:rounded-3xl sm:p-6"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 id="agenda-dialog-title" className="flex items-center gap-2 text-base font-bold text-slate-900">
+                  <QrCode className="h-5 w-5 text-emerald-600" />
+                  Isi Agenda Mengajar
+                </h3>
+                {scannedSchedule && (
+                  <p className="mt-1 text-xs text-slate-500">
+                    {scannedSchedule.classroom.name} · {scannedSchedule.subject} · {scannedSchedule.startTime}–{scannedSchedule.endTime}
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={closeModal}
+                disabled={isSubmitting}
+                aria-label="Tutup formulir"
+                className="rounded-full p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 disabled:opacity-50"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="mt-3 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-2.5 text-xs font-semibold text-emerald-800">
+              <CheckCircle className="h-4 w-4 shrink-0 text-emerald-600" />
+              <span>QR ruang terbaca. Lengkapi materi lalu simpan agenda.</span>
+            </div>
+
+            {modalError && (
+              <div role="alert" className="mt-3 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 p-2.5 text-xs font-semibold text-rose-800">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
+                <span>{modalError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+              <div>
+                <label htmlFor="teaching-material" className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-700">
+                  Materi Pelajaran yang Diajarkan Hari Ini
+                </label>
+                <textarea
+                  id="teaching-material"
+                  autoFocus
+                  rows={4}
+                  value={teachingMaterial}
+                  onChange={(e) => setTeachingMaterial(e.target.value)}
+                  aria-invalid={modalError === 'Materi yang diajarkan wajib diisi.'}
+                  placeholder="Tuliskan pokok bahasan, bab materi, atau kegiatan pembelajaran yang disampaikan di kelas..."
+                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="agenda-notes" className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-slate-700">
+                  Catatan / Kejadian di Kelas (Opsional)
+                </label>
+                <input
+                  id="agenda-notes"
+                  type="text"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Contoh: Siswa aktif, proyektor sempat bermasalah, tugas dikumpulkan di LMS"
+                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div className="flex flex-col-reverse gap-2 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  disabled={isSubmitting}
+                  className="rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 sm:flex-1"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-3 text-sm font-bold text-white shadow-md hover:from-emerald-700 hover:to-teal-700 disabled:opacity-60 sm:flex-[2]"
+                >
+                  <Check className="h-5 w-5" />
+                  <span>{isSubmitting ? 'Menyimpan Agenda...' : 'Simpan Agenda Mengajar'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
