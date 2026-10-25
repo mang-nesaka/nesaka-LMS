@@ -1,0 +1,12 @@
+#!/bin/sh
+# Jalankan unit test sebelum commit bila ada perubahan kode. Tes gagal = commit dibatalkan.
+# Pasang dengan: npm run hooks:install
+if git diff --cached --name-only | grep -qE '^(src/|prisma/|scripts/|package(-lock)?\.json|vitest\.config|tsconfig)'; then
+  echo "[pre-commit] Menjalankan unit test..."
+  if ! npm test; then
+    echo "[pre-commit] Unit test gagal. Commit dibatalkan." >&2
+    exit 1
+  fi
+else
+  echo "[pre-commit] Tidak ada perubahan kode, tes dilewati."
+fi
