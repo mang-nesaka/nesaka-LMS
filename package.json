@@ -8,6 +8,7 @@
     "start": "next start",
     "test": "vitest run",
     "test:watch": "vitest",
+    "hooks:install": "node scripts/install-hooks.mjs",
     "seed:demo": "node --experimental-strip-types scripts/seed-demo-data.mts",
     "watch:commit": "node scripts/auto-commit-push.mjs",
     "lint": "eslint",
