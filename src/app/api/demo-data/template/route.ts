@@ -27,7 +27,7 @@ export async function GET() {
     { information: 'Template ini berisi 30 kelas, 50 guru, 1.080 siswa, dan 600 jadwal (Senin-Jumat).' },
     { information: 'Email akun menggunakan domain @nesaka.demo agar tidak berbenturan dengan akun sekolah.' },
     { information: 'Jangan ubah nama sheet atau header kolom. Kolom password pada sheet Guru dan Siswa opsional; kosongkan untuk membuat password acak. Password yang diisi minimal 6 karakter.' },
-    { information: 'Akun baru yang dibuat saat import tercantum di file kredensial. Akun yang sudah ada tidak diubah saat import ulang.' },
+    { information: 'Akun baru dan akun lama yang password-nya diperbarui tercantum di file kredensial hasil import.' },
     { information: 'Import ulang aman: akun, kelas, dan jadwal yang sudah ada tidak ditimpa atau diduplikasi.' },
     { information: 'Jadwal menggunakan hari 1=Senin sampai 5=Jumat; 0=Minggu dan 6=Sabtu.' },
   ]);

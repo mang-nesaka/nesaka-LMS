@@ -121,16 +121,26 @@ export async function importDemoDataset(prisma: PrismaClient, dataset: DemoDatas
     where: { email: { in: emails } },
     select: { email: true, role: true },
   });
-  const existingByEmail = new Map(existingAccounts.map((account) => [account.email.toLowerCase(), account.role]));
+  const existingByEmail = new Map(existingAccounts.map((account) => [account.email.toLowerCase(), account]));
   for (const account of accountRows) {
-    const existingRole = existingByEmail.get(account.email.toLowerCase());
-    if (existingRole && existingRole !== account.role) {
-      throw new Error(`Email ${account.email} sudah digunakan oleh role ${existingRole}.`);
+    const existingAccount = existingByEmail.get(account.email.toLowerCase());
+    if (existingAccount && existingAccount.role !== account.role) {
+      throw new Error(`Email ${account.email} sudah digunakan oleh role ${existingAccount.role}.`);
     }
   }
 
   const newAccounts = accountRows.filter((account) => !existingByEmail.has(account.email.toLowerCase()));
-  const credentials: Array<{ email: string; role: string; password: string }> = [];
+  const existingPasswordUpdates = await Promise.all(accountRows
+    .filter((account) => existingByEmail.has(account.email.toLowerCase()) && account.password)
+    .map(async (account) => ({
+      email: existingByEmail.get(account.email.toLowerCase())!.email,
+      role: account.role,
+      password: account.password!,
+      passwordHash: await bcrypt.hash(account.password!, 8),
+    })));
+  const credentials: Array<{ email: string; role: string; password: string }> = existingPasswordUpdates.map(
+    ({ email, role, password }) => ({ email, role, password }),
+  );
   const accountsWithHashes: Prisma.UserCreateManyInput[] = [];
   for (let start = 0; start < newAccounts.length; start += 20) {
     const batch = newAccounts.slice(start, start + 20);
@@ -143,6 +153,11 @@ export async function importDemoDataset(prisma: PrismaClient, dataset: DemoDatas
   }
 
   return prisma.$transaction(async (tx) => {
+    await Promise.all(existingPasswordUpdates.map(({ email, passwordHash }) => tx.user.update({
+      where: { email },
+      data: { password: passwordHash },
+    })));
+
     const classroomResult = await tx.classroom.createMany({
       data: dataset.classrooms.map(({ name, code, level }) => ({ name, code, level })),
       skipDuplicates: true,
@@ -209,9 +224,10 @@ export async function importDemoDataset(prisma: PrismaClient, dataset: DemoDatas
       teachersCreated: teacherResult.count,
       studentsCreated: studentResult.count,
       schedulesCreated: scheduleResult.count,
+      passwordsUpdatedCount: existingPasswordUpdates.length,
       credentialsCount: credentials.length,
       credentialsCsv: [
-        'email,role,temporary_password',
+        'email,role,password',
         ...credentials.map((credential) => `${credential.email},${credential.role},${credential.password}`),
       ].join('\r\n'),
     };

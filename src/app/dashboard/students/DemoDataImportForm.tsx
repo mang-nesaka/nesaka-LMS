@@ -9,6 +9,7 @@ interface ImportResult {
   teachersCreated: number;
   studentsCreated: number;
   schedulesCreated: number;
+  passwordsUpdatedCount: number;
   credentialsCount: number;
   credentialsCsv: string;
 }
@@ -26,7 +27,7 @@ export default function DemoDataImportForm() {
             Data Demo Sekolah
           </h3>
           <p className="mt-1 max-w-2xl text-xs leading-relaxed text-slate-600">
-            Template berisi 30 kelas, 50 guru, 1.080 siswa, dan jadwal Senin–Jumat. Import hanya menambah data yang belum ada.
+            Template berisi 30 kelas, 50 guru, 1.080 siswa, dan jadwal Senin–Jumat. Password terisi akan diterapkan ke akun dengan email yang cocok.
           </p>
         </div>
         <a
@@ -55,7 +56,7 @@ export default function DemoDataImportForm() {
             }
             setMessage({
               type: 'success',
-              text: `Import selesai: ${result.classroomsCreated} kelas, ${result.teachersCreated} guru, ${result.studentsCreated} siswa, ${result.schedulesCreated} jadwal baru.${result.credentialsCount ? ' File kredensial baru diunduh.' : ' Semua akun demo sudah ada; tidak ada password yang diubah.'}`,
+              text: `Import selesai: ${result.classroomsCreated} kelas, ${result.teachersCreated} guru, ${result.studentsCreated} siswa, ${result.schedulesCreated} jadwal baru, ${result.passwordsUpdatedCount} password akun diperbarui.${result.credentialsCount ? ' File kredensial diunduh.' : ''}`,
             });
             const input = document.getElementById('demo-data-file') as HTMLInputElement | null;
             if (input) input.value = '';
