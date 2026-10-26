@@ -171,8 +171,8 @@ export default function CreateExamModal({ courses }: { courses: CourseOption[] }
           <input
             type="text"
             name="description"
-            placeholder="Contoh: Dilarang membuka tab lain. Pelanggaran 3x otomatis mengunci ujian."
-            defaultValue="Dilarang keluar dari layar ujian. Setiap perpindahan layar dicatat sebagai pelanggaran."
+            placeholder="Contoh: Jangan berpindah aplikasi. Dua pelanggaran akan mengumpulkan jawaban otomatis."
+            defaultValue="Jangan berpindah aplikasi atau tab. Dua pelanggaran akan mengumpulkan jawaban otomatis."
             className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
           />
         </div>

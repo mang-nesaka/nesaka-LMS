@@ -107,10 +107,10 @@ export default async function ExamsPage() {
               <div className="space-y-1.5 text-sm">
                 <h4 className="font-bold text-amber-950">Aturan Keamanan Sistem CBT (Anti-Kecurangan)</h4>
                 <ul className="list-disc list-inside text-xs sm:text-sm text-amber-800 space-y-1">
-                  <li>Ujian wajib dijalankan dalam mode <strong>Layar Penuh (Fullscreen)</strong>.</li>
-                  <li>Siswa dilarang berpindah tab browser, membuka aplikasi lain, atau meminimalkan jendela ujian.</li>
-                  <li>Sistem mencatat setiap indikasi keluar layar (Alt+Tab, Windows Key, F11, F12, dsb).</li>
-                  <li>Jika terdeteksi melakukan pelanggaran sebanyak <strong>3 kali</strong>, lembar ujian otomatis diserahkan dan dihitung nilainya.</li>
+                  <li>Mode layar penuh dan pencegah layar tidur digunakan jika didukung browser smartphone.</li>
+                  <li>Jangan berpindah aplikasi/tab, membuka split-screen, atau meninggalkan halaman ujian.</li>
+                  <li>Aktifkan Jangan Ganggu dan tutup aplikasi lain sebelum mulai; tombol sistem dan screenshot tidak dapat diblokir browser.</li>
+                  <li><strong>Dua pelanggaran terdeteksi akan mengumpulkan jawaban secara otomatis.</strong></li>
                 </ul>
               </div>
             </div>

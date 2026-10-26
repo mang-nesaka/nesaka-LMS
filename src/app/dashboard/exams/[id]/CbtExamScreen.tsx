@@ -9,6 +9,8 @@ import {
   ArrowLeft, ArrowRight, Send, Maximize, AlertCircle
 } from 'lucide-react';
 
+const MAX_VIOLATIONS = 2;
+
 interface QuestionItem {
   id: string;
   questionNumber: number;
@@ -19,6 +21,28 @@ interface QuestionItem {
   optionC: string;
   optionD: string;
   optionE: string | null;
+}
+
+interface SubmittedResult {
+  score: number;
+  totalCorrect: number;
+  totalQuestions: number;
+  violationsCount: number;
+}
+
+async function requestScreenWakeLock(
+  wakeLockRef: { current: { release: () => Promise<void> } | null }
+) {
+  const wakeLock = (navigator as Navigator & {
+    wakeLock?: { request: (type: 'screen') => Promise<{ release: () => Promise<void> }> };
+  }).wakeLock;
+  if (!wakeLock || wakeLockRef.current) return;
+
+  try {
+    wakeLockRef.current = await wakeLock.request('screen');
+  } catch {
+    // Wake Lock can be unavailable or denied by the browser or operating system.
+  }
 }
 
 interface Props {
@@ -43,21 +67,31 @@ export default function CbtExamScreen({ exam, questions, studentName }: Props) {
   const [violations, setViolations] = useState(0);
   const [warningModal, setWarningModal] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submittedResult, setSubmittedResult] = useState<any>(null);
+  const [submittedResult, setSubmittedResult] = useState<SubmittedResult | null>(null);
 
   const violationsRef = useRef(0);
   const answersRef = useRef(answers);
-  answersRef.current = answers;
+  const lastViolationAtRef = useRef(0);
+  const deadlineRef = useRef<number | null>(null);
+  const submittingRef = useRef(false);
+  const triggerSubmitRef = useRef<(auto?: boolean) => void>(() => {});
+  const wakeLockRef = useRef<{ release: () => Promise<void> } | null>(null);
 
-  // 1. Fullscreen request saat memulai ujian
+  useEffect(() => {
+    answersRef.current = answers;
+  }, [answers]);
+
+  // Fullscreen and Wake Lock are optional because some mobile browsers do not support them.
   const startExam = async () => {
     try {
       if (document.documentElement.requestFullscreen) {
         await document.documentElement.requestFullscreen();
       }
-    } catch (e) {
-      console.log('Fullscreen rejected or not supported');
+    } catch {
+      // Continue in browsers that reject fullscreen requests.
     }
+    await requestScreenWakeLock(wakeLockRef);
+    deadlineRef.current = Date.now() + exam.durationMinutes * 60 * 1000;
     setHasStarted(true);
   };
 
@@ -65,37 +99,45 @@ export default function CbtExamScreen({ exam, questions, studentName }: Props) {
   useEffect(() => {
     if (!hasStarted || submittedResult) return;
 
-    const handleViolation = (reason: string) => {
+    const handleViolation = () => {
+      const now = Date.now();
+      if (now - lastViolationAtRef.current < 1500) return;
+      lastViolationAtRef.current = now;
+
       violationsRef.current += 1;
       const currentCount = violationsRef.current;
       setViolations(currentCount);
 
-      if (currentCount >= 3) {
-        setWarningModal('Batas pelanggaran maksimal (3x) telah tercapai. Ujian Anda otomatis diserahkan ke pengawas.');
-        triggerSubmit(true);
+      if (currentCount >= MAX_VIOLATIONS) {
+        setWarningModal(`Batas pelanggaran maksimal (${MAX_VIOLATIONS}x) telah tercapai. Jawaban ujian otomatis dikumpulkan.`);
+        triggerSubmitRef.current(true);
       } else {
-        setWarningModal(`Peringatan Pelanggaran CBT (${currentCount}/3): Anda terdeteksi keluar dari layar ujian atau membuka tab lain! Dilarang berpindah layar.`);
+        setWarningModal(`Peringatan pelanggaran CBT (${currentCount}/${MAX_VIOLATIONS}): aktivitas meninggalkan layar ujian terdeteksi. Pelanggaran berikutnya akan mengumpulkan jawaban otomatis.`);
       }
     };
 
     const onVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
-        handleViolation('Tab atau aplikasi diminimalkan');
+        handleViolation();
+      } else {
+        requestScreenWakeLock(wakeLockRef);
       }
-    };
-
-    const onBlur = () => {
-      handleViolation('Kursor meninggalkan jendela ujian');
     };
 
     const onFullscreenChange = () => {
       if (!document.fullscreenElement && hasStarted && !submittedResult) {
-        handleViolation('Keluar dari mode layar penuh (Fullscreen)');
+        handleViolation();
+      }
+    };
+
+    const onWindowBlur = () => {
+      if (document.visibilityState !== 'hidden' && navigator.maxTouchPoints === 0) {
+        handleViolation();
       }
     };
 
     const onKeyDown = (e: KeyboardEvent) => {
-      // Blokir tombol tertentu seperti Alt+Tab, F11, F12, Ctrl+C/V
+      // Block browser shortcuts that can be intercepted; OS-level shortcuts remain outside browser control.
       if (
         e.key === 'F12' || 
         e.key === 'F11' || 
@@ -103,7 +145,7 @@ export default function CbtExamScreen({ exam, questions, studentName }: Props) {
         (e.ctrlKey && ['c', 'v', 'u', 'p', 's'].includes(e.key.toLowerCase()))
       ) {
         e.preventDefault();
-        handleViolation('Menekan tombol pintasan keyboard terlarang');
+        handleViolation();
       }
     };
 
@@ -111,60 +153,62 @@ export default function CbtExamScreen({ exam, questions, studentName }: Props) {
       e.preventDefault(); // Matikan klik kanan
     };
 
-    window.addEventListener('visibilitychange', onVisibilityChange);
-    window.addEventListener('blur', onBlur);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('blur', onWindowBlur);
     document.addEventListener('fullscreenchange', onFullscreenChange);
     window.addEventListener('keydown', onKeyDown);
     document.addEventListener('contextmenu', onContextMenu);
 
     return () => {
-      window.removeEventListener('visibilitychange', onVisibilityChange);
-      window.removeEventListener('blur', onBlur);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('blur', onWindowBlur);
       document.removeEventListener('fullscreenchange', onFullscreenChange);
       window.removeEventListener('keydown', onKeyDown);
       document.removeEventListener('contextmenu', onContextMenu);
     };
   }, [hasStarted, submittedResult]);
 
-  // 3. Timer Countdown
+  // Use wall-clock time so backgrounding the browser does not pause the exam timer.
   useEffect(() => {
     if (!hasStarted || submittedResult) return;
 
     const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          triggerSubmit(true);
-          return 0;
-        }
-        return prev - 1;
-      });
+      const remaining = Math.max(0, Math.ceil(((deadlineRef.current ?? Date.now()) - Date.now()) / 1000));
+      setTimeLeft(remaining);
+      if (remaining === 0) triggerSubmitRef.current(true);
     }, 1000);
 
     return () => clearInterval(timer);
   }, [hasStarted, submittedResult]);
 
-  // 4. Submit Jawaban
+  // Submit answers once, including when timeout and a violation happen together.
   const triggerSubmit = async (auto = false) => {
-    if (isSubmitting) return;
+    if (submittingRef.current) return;
     if (!auto && !confirm('Apakah Anda yakin ingin menyelesaikan dan mengirimkan jawaban ujian ini?')) {
       return;
     }
 
+    submittingRef.current = true;
     setIsSubmitting(true);
     try {
       const res = await submitExamAction(exam.id, answersRef.current, violationsRef.current);
       setSubmittedResult(res);
 
-      // Keluar dari fullscreen jika masih aktif
       if (document.fullscreenElement && document.exitFullscreen) {
         document.exitFullscreen().catch(() => {});
       }
-    } catch (err: any) {
-      alert(err.message || 'Gagal mengirimkan ujian. Silakan coba kembali.');
+      wakeLockRef.current?.release().catch(() => {});
+      wakeLockRef.current = null;
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Gagal mengirimkan ujian. Silakan coba kembali.');
+      submittingRef.current = false;
       setIsSubmitting(false);
     }
   };
+
+  useEffect(() => {
+    triggerSubmitRef.current = triggerSubmit;
+  });
 
   const formatTimer = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -175,8 +219,8 @@ export default function CbtExamScreen({ exam, questions, studentName }: Props) {
   // LAYAR 1: Petunjuk Sebelum Mulai
   if (!hasStarted) {
     return (
-      <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center p-4">
-        <div className="max-w-xl w-full bg-slate-800 p-8 rounded-3xl border border-slate-700 shadow-2xl space-y-6">
+      <div className="min-h-dvh bg-slate-900 text-white flex items-center justify-center p-4">
+        <div className="max-w-xl w-full bg-slate-800 p-5 sm:p-8 rounded-2xl sm:rounded-3xl border border-slate-700 shadow-2xl space-y-5 sm:space-y-6">
           <div className="text-center space-y-2">
             <span className="px-3.5 py-1 bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 rounded-full text-xs font-semibold uppercase tracking-wider">
               {exam.course.title}
@@ -184,7 +228,7 @@ export default function CbtExamScreen({ exam, questions, studentName }: Props) {
             <h1 className="text-2xl sm:text-3xl font-extrabold text-white mt-2">
               {exam.title}
             </h1>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs leading-relaxed text-slate-400">
               Peserta: <strong className="text-slate-200">{studentName}</strong> | Durasi: <strong className="text-slate-200">{exam.durationMinutes} Menit</strong> | Soal: <strong className="text-slate-200">{questions.length} Butir</strong>
             </p>
           </div>
@@ -192,19 +236,19 @@ export default function CbtExamScreen({ exam, questions, studentName }: Props) {
           <div className="p-5 bg-amber-500/10 border border-amber-500/30 rounded-2xl space-y-3 text-xs text-amber-300">
             <p className="font-bold flex items-center gap-2 text-sm text-amber-400">
               <ShieldAlert className="w-5 h-5 flex-shrink-0" />
-              Sistem Keamanan CBT Terkunci (Anti-Kecurangan):
+              Aturan Keamanan Ujian:
             </p>
             <ul className="list-disc list-inside space-y-1.5 text-amber-200/90 pl-1">
-              <li>Ujian akan berjalan dalam mode <strong>Layar Penuh (Fullscreen)</strong>.</li>
-              <li>Dilarang berpindah tab, membuka jendela aplikasi lain, atau keluar dari fullscreen.</li>
-              <li>Setiap perpindahan layar dicatat sebagai pelanggaran. <strong>Jika mencapai 3 kali pelanggaran, ujian otomatis ditutup & diserahkan</strong>.</li>
-              <li>Fungsi klik kanan dan tombol pintasan keyboard (Alt+Tab, Ctrl+C/V) dinonaktifkan.</li>
+              <li>Mode layar penuh dan pencegah layar tidur digunakan jika didukung browser.</li>
+              <li>Jangan berpindah aplikasi/tab, membuka split-screen, atau meninggalkan halaman ujian.</li>
+              <li><strong>Dua pelanggaran akan mengumpulkan jawaban secara otomatis.</strong></li>
+              <li>Aktifkan Jangan Ganggu dan tutup aplikasi lain sebelum mulai. Browser tidak dapat memblokir screenshot atau tombol sistem ponsel.</li>
             </ul>
           </div>
 
           <button
             onClick={startExam}
-            className="w-full py-4 px-6 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold text-base rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2"
+            className="w-full min-h-12 py-3.5 px-5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-base rounded-xl shadow-lg transition-all flex items-center justify-center gap-2"
           >
             <Maximize className="w-5 h-5" />
             Saya Mengerti & Mulai Ujian Sekarang
@@ -217,8 +261,8 @@ export default function CbtExamScreen({ exam, questions, studentName }: Props) {
   // LAYAR 2: Hasil Ujian Selesai
   if (submittedResult) {
     return (
-      <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-slate-800 p-8 rounded-3xl border border-slate-700 shadow-2xl text-center space-y-6">
+      <div className="min-h-dvh bg-slate-900 text-white flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-slate-800 p-5 sm:p-8 rounded-2xl sm:rounded-3xl border border-slate-700 shadow-2xl text-center space-y-6">
           <div className="w-16 h-16 bg-emerald-500/20 text-emerald-400 rounded-2xl flex items-center justify-center mx-auto border border-emerald-500/30">
             <CheckCircle2 className="w-9 h-9" />
           </div>
@@ -269,7 +313,7 @@ export default function CbtExamScreen({ exam, questions, studentName }: Props) {
       {/* Warning Modal jika Terdeteksi Keluar */}
       {warningModal && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="max-w-md w-full bg-slate-900 border-2 border-red-500/80 rounded-3xl p-6 text-center space-y-4 shadow-2xl animate-pulse">
+          <div className="max-w-md w-full bg-slate-900 border-2 border-red-500/80 rounded-2xl p-5 sm:p-6 text-center space-y-4 shadow-2xl">
             <div className="w-14 h-14 bg-red-500/20 text-red-500 rounded-2xl flex items-center justify-center mx-auto">
               <AlertTriangle className="w-8 h-8" />
             </div>
@@ -278,36 +322,36 @@ export default function CbtExamScreen({ exam, questions, studentName }: Props) {
             <button
               onClick={() => {
                 setWarningModal(null);
-                if (document.documentElement.requestFullscreen) {
+                if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
                   document.documentElement.requestFullscreen().catch(() => {});
                 }
               }}
-              className="w-full py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs"
+              className="w-full min-h-11 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-sm"
             >
-              Kembali ke Layar Penuh Ujian
+              Kembali ke Ujian
             </button>
           </div>
         </div>
       )}
 
       {/* Top Navbar CBT */}
-      <header className="h-16 bg-slate-900/90 border-b border-slate-800 px-4 sm:px-8 flex items-center justify-between sticky top-0 z-30">
-        <div>
+      <header className="min-h-16 bg-slate-900/95 border-b border-slate-800 px-3 sm:px-8 py-2 flex items-center justify-between gap-2 sticky top-0 z-30 backdrop-blur">
+        <div className="min-w-0">
           <h2 className="text-sm font-bold text-white line-clamp-1">{exam.title}</h2>
-          <p className="text-xs text-slate-400">{exam.course.title} | {studentName}</p>
+          <p className="hidden sm:block text-xs text-slate-400">{exam.course.title} | {studentName}</p>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-4">
           {/* Status Pelanggaran */}
           {violations > 0 && (
-            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 bg-red-500/20 text-red-400 border border-red-500/30 rounded-xl text-xs font-semibold">
+            <div className="flex items-center gap-1 px-2 py-1 bg-red-500/20 text-red-300 border border-red-500/30 rounded-lg text-[10px] sm:text-xs font-semibold">
               <AlertCircle className="w-3.5 h-3.5" />
-              <span>Pelanggaran: {violations}/3</span>
+              <span>{violations}/{MAX_VIOLATIONS}</span>
             </div>
           )}
 
           {/* Timer Countdown */}
-          <div className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl font-mono text-sm font-bold border ${
+          <div className={`flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-lg sm:rounded-xl font-mono text-sm font-bold border ${
             timeLeft < 300 
               ? 'bg-red-500/20 text-red-400 border-red-500/40 animate-pulse' 
               : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'
@@ -319,9 +363,9 @@ export default function CbtExamScreen({ exam, questions, studentName }: Props) {
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <main className="flex-1 max-w-6xl w-full mx-auto px-3 py-3 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:p-6 grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
         {/* Kolom Soal (Kiri - 3 Grid) */}
-        <div className="lg:col-span-3 bg-slate-900 rounded-3xl border border-slate-800 p-6 sm:p-8 flex flex-col justify-between shadow-xl">
+        <div className="lg:col-span-3 bg-slate-900 rounded-2xl sm:rounded-3xl border border-slate-800 p-4 sm:p-8 flex flex-col justify-between shadow-xl">
           <div>
             <div className="flex items-center justify-between pb-4 border-b border-slate-800">
               <span className="px-3 py-1 bg-indigo-600 text-white font-bold rounded-xl text-xs">
@@ -334,17 +378,17 @@ export default function CbtExamScreen({ exam, questions, studentName }: Props) {
 
             {/* Gambar Soal (Jika Ada) */}
             {currentQuestion.imageUrl && (
-              <div className="my-5 flex justify-center">
+              <div className="my-4 sm:my-5 flex justify-center">
                 <img
                   src={currentQuestion.imageUrl}
                   alt="Ilustrasi Gambar Soal"
-                  className="max-h-64 object-contain rounded-2xl border border-slate-700 bg-slate-950 p-2"
+                  className="max-h-[35dvh] max-w-full object-contain rounded-xl border border-slate-700 bg-slate-950 p-2"
                 />
               </div>
             )}
 
             {/* Teks Pertanyaan (Mendukung KaTeX Rumus Matematika & Bahasa Arab) */}
-            <div className="my-6 text-sm sm:text-base text-slate-100 font-medium leading-relaxed">
+            <div className="my-5 sm:my-6 text-base sm:text-lg text-slate-100 font-medium leading-relaxed">
               <RichContent content={currentQuestion.questionText} />
             </div>
 
@@ -362,8 +406,8 @@ export default function CbtExamScreen({ exam, questions, studentName }: Props) {
                   <button
                     key={opt.key}
                     type="button"
-                    onClick={() => setAnswers({ ...answers, [currentQuestion.id]: opt.key })}
-                    className={`w-full text-left p-4 rounded-2xl border transition-all flex items-start gap-3.5 ${
+                    onClick={() => setAnswers((previous) => ({ ...previous, [currentQuestion.id]: opt.key }))}
+                    className={`w-full min-h-14 text-left p-3.5 sm:p-4 rounded-xl sm:rounded-2xl border transition-all flex items-start gap-3 ${
                       isSelected
                         ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-md'
                         : 'bg-slate-800/60 border-slate-750 hover:bg-slate-800 text-slate-200'
@@ -374,7 +418,7 @@ export default function CbtExamScreen({ exam, questions, studentName }: Props) {
                     }`}>
                       {opt.key}
                     </span>
-                    <div className="flex-1 pt-0.5 text-xs sm:text-sm">
+                    <div className="flex-1 pt-0.5 text-sm sm:text-base">
                       <RichContent content={opt.text} />
                     </div>
                   </button>
@@ -384,11 +428,11 @@ export default function CbtExamScreen({ exam, questions, studentName }: Props) {
           </div>
 
           {/* Tombol Navigasi Bawah */}
-          <div className="pt-6 mt-8 border-t border-slate-800 flex items-center justify-between">
+          <div className="sticky bottom-0 z-20 -mx-4 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] mt-6 border-t border-slate-800 bg-slate-900/95 backdrop-blur flex items-center justify-between gap-2 sm:static sm:mx-0 sm:mt-8 sm:px-0 sm:pt-6 sm:pb-0 sm:bg-transparent sm:backdrop-blur-none">
             <button
               onClick={() => setCurrentIndex((prev) => Math.max(0, prev - 1))}
               disabled={isFirst}
-              className="flex items-center gap-1.5 px-4 py-2.5 bg-slate-800 hover:bg-slate-750 disabled:opacity-40 text-slate-300 font-semibold rounded-xl text-xs transition-colors"
+              className="flex min-h-11 items-center gap-1 px-3 sm:px-4 py-2.5 bg-slate-800 hover:bg-slate-750 disabled:opacity-40 text-slate-300 font-semibold rounded-xl text-xs sm:text-sm transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
               Sebelumnya
@@ -398,7 +442,7 @@ export default function CbtExamScreen({ exam, questions, studentName }: Props) {
               <button
                 onClick={() => triggerSubmit(false)}
                 disabled={isSubmitting}
-                className="flex items-center gap-1.5 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-lg transition-all"
+                className="flex min-h-11 items-center gap-1.5 px-4 sm:px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs sm:text-sm shadow-lg transition-all"
               >
                 <Send className="w-4 h-4" />
                 {isSubmitting ? 'Mengirim...' : 'Selesai & Kumpulkan'}
@@ -406,7 +450,7 @@ export default function CbtExamScreen({ exam, questions, studentName }: Props) {
             ) : (
               <button
                 onClick={() => setCurrentIndex((prev) => Math.min(questions.length - 1, prev + 1))}
-                className="flex items-center gap-1.5 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-xs transition-all shadow-md"
+                className="flex min-h-11 items-center gap-1.5 px-4 sm:px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-xs sm:text-sm transition-all shadow-md"
               >
                 Selanjutnya
                 <ArrowRight className="w-4 h-4" />
@@ -416,7 +460,7 @@ export default function CbtExamScreen({ exam, questions, studentName }: Props) {
         </div>
 
         {/* Kolom Navigasi Nomor Soal (Kanan - 1 Grid) */}
-        <div className="bg-slate-900 rounded-3xl border border-slate-800 p-6 flex flex-col justify-between shadow-xl">
+        <div className="hidden lg:flex bg-slate-900 rounded-3xl border border-slate-800 p-6 flex-col justify-between shadow-xl">
           <div>
             <div className="flex justify-between items-center mb-4 pb-3 border-b border-slate-800">
               <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider">
@@ -436,7 +480,7 @@ export default function CbtExamScreen({ exam, questions, studentName }: Props) {
                   <button
                     key={q.id}
                     onClick={() => setCurrentIndex(idx)}
-                    className={`h-10 rounded-xl text-xs font-bold transition-all ${
+                    className={`h-11 rounded-xl text-xs font-bold transition-all ${
                       isActive
                         ? 'ring-2 ring-indigo-400 bg-indigo-600 text-white'
                         : isAnswered
@@ -469,6 +513,35 @@ export default function CbtExamScreen({ exam, questions, studentName }: Props) {
             </button>
           </div>
         </div>
+
+        <details className="lg:hidden bg-slate-900 rounded-xl border border-slate-800 shadow-xl">
+          <summary className="min-h-12 px-4 py-3 flex items-center justify-between gap-3 cursor-pointer list-none text-sm font-bold text-slate-200">
+            <span>Navigasi Soal</span>
+            <span className="text-xs text-indigo-400">{answeredCount}/{questions.length} terjawab</span>
+          </summary>
+          <div className="px-4 pb-4 grid grid-cols-5 sm:grid-cols-7 gap-2">
+            {questions.map((question, index) => {
+              const isAnswered = !!answers[question.id];
+              const isActive = index === currentIndex;
+              return (
+                <button
+                  key={question.id}
+                  type="button"
+                  onClick={() => setCurrentIndex(index)}
+                  className={`h-11 rounded-lg text-xs font-bold transition-colors ${
+                    isActive
+                      ? 'ring-2 ring-indigo-400 bg-indigo-600 text-white'
+                      : isAnswered
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-slate-800 text-slate-400'
+                  }`}
+                >
+                  {index + 1}
+                </button>
+              );
+            })}
+          </div>
+        </details>
       </main>
     </div>
   );
