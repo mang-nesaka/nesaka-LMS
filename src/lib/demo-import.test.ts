@@ -9,8 +9,8 @@ describe('demo workbook import format', () => {
     const workbook = new ExcelJS.Workbook();
     const sheetDefinitions = [
       ['Kelas', dataset.classrooms],
-      ['Guru', dataset.teachers],
-      ['Siswa', dataset.students],
+      ['Guru', dataset.teachers.map((teacher, index) => ({ ...teacher, password: index === 0 ? 'guruDemo123' : '' }))],
+      ['Siswa', dataset.students.map((student, index) => ({ ...student, password: index === 0 ? 'siswaDemo123' : '' }))],
       ['Jadwal', dataset.schedules],
     ] as const;
 
@@ -30,5 +30,30 @@ describe('demo workbook import format', () => {
     expect(imported.students).toHaveLength(1080);
     expect(imported.schedules).toHaveLength(600);
     expect(imported.students[0].classroomCode).toBe(imported.classrooms[0].code);
+    expect(imported.teachers[0].password).toBe('guruDemo123');
+    expect(imported.students[0].password).toBe('siswaDemo123');
+    expect(imported.teachers[1].password).toBeUndefined();
+  });
+
+  it('rejects account passwords shorter than six characters', async () => {
+    const dataset = generateDemoDataset();
+    const workbook = new ExcelJS.Workbook();
+    const sheetDefinitions = [
+      ['Kelas', dataset.classrooms],
+      ['Guru', dataset.teachers.map((teacher, index) => ({ ...teacher, password: index === 0 ? 'short' : '' }))],
+      ['Siswa', dataset.students],
+      ['Jadwal', dataset.schedules],
+    ] as const;
+
+    for (const [name, rows] of sheetDefinitions) {
+      const sheet = workbook.addWorksheet(name);
+      sheet.columns = Object.keys(rows[0]).map((key) => ({ header: key, key }));
+      sheet.addRows(rows);
+    }
+
+    const generated = await workbook.xlsx.writeBuffer();
+    const bytes = generated as unknown as Uint8Array;
+    const input = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+    await expect(parseDemoWorkbook(input)).rejects.toThrow('Password akun demo minimal 6 karakter.');
   });
 });

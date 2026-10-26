@@ -26,7 +26,8 @@ export async function GET() {
   ], [
     { information: 'Template ini berisi 30 kelas, 50 guru, 1.080 siswa, dan 600 jadwal (Senin-Jumat).' },
     { information: 'Email akun menggunakan domain @nesaka.demo agar tidak berbenturan dengan akun sekolah.' },
-    { information: 'Jangan ubah nama sheet atau header kolom. Setiap akun baru mendapat password acak; setelah import unduh file kredensial.' },
+    { information: 'Jangan ubah nama sheet atau header kolom. Kolom password pada sheet Guru dan Siswa opsional; kosongkan untuk membuat password acak. Password yang diisi minimal 6 karakter.' },
+    { information: 'Akun baru yang dibuat saat import tercantum di file kredensial. Akun yang sudah ada tidak diubah saat import ulang.' },
     { information: 'Import ulang aman: akun, kelas, dan jadwal yang sudah ada tidak ditimpa atau diduplikasi.' },
     { information: 'Jadwal menggunakan hari 1=Senin sampai 5=Jumat; 0=Minggu dan 6=Sabtu.' },
   ]);
@@ -39,15 +40,17 @@ export async function GET() {
   addSheet('Guru', [
     { header: 'name', key: 'name', width: 26 },
     { header: 'email', key: 'email', width: 38 },
+    { header: 'password', key: 'password', width: 24 },
     { header: 'role', key: 'role', width: 16 },
-  ], dataset.teachers);
+  ], dataset.teachers.map((teacher) => ({ ...teacher, password: '' })));
   addSheet('Siswa', [
     { header: 'name', key: 'name', width: 24 },
     { header: 'email', key: 'email', width: 40 },
+    { header: 'password', key: 'password', width: 24 },
     { header: 'studentClass', key: 'studentClass', width: 52 },
     { header: 'nipOrNis', key: 'nipOrNis', width: 18 },
     { header: 'classroomCode', key: 'classroomCode', width: 28 },
-  ], dataset.students);
+  ], dataset.students.map((student) => ({ ...student, password: '' })));
   addSheet('Jadwal', [
     { header: 'teacherEmail', key: 'teacherEmail', width: 40 },
     { header: 'classroomCode', key: 'classroomCode', width: 28 },

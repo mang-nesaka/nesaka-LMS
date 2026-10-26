@@ -94,7 +94,7 @@ export default function DemoDataImportForm() {
         </p>
       )}
       <p className="mt-2 text-[11px] text-slate-500">
-        Simpan file kredensial dengan aman. Password hanya ditampilkan satu kali dan tidak ikut template.
+        Kolom password di sheet Guru dan Siswa boleh dikosongkan agar dibuat acak. Password yang diisi minimal 6 karakter. Simpan file kredensial hasil import dengan aman.
       </p>
     </section>
   );

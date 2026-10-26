@@ -5,8 +5,8 @@ import type { Prisma, PrismaClient } from '@prisma/client';
 
 export interface DemoDataset {
   classrooms: Array<{ name: string; code: string; level: string; program: string }>;
-  teachers: Array<{ name: string; email: string; role: 'TEACHER' }>;
-  students: Array<{ name: string; email: string; studentClass: string; nipOrNis: string; classroomCode: string }>;
+  teachers: Array<{ name: string; email: string; password?: string; role: 'TEACHER' }>;
+  students: Array<{ name: string; email: string; password?: string; studentClass: string; nipOrNis: string; classroomCode: string }>;
   schedules: Array<{ teacherEmail: string; classroomCode: string; subject: string; dayOfWeek: number; startTime: string; endTime: string }>;
 }
 
@@ -56,6 +56,9 @@ function validateDataset(dataset: DemoDataset) {
   if (dataset.students.some((student) => !student.name || !student.email || !student.studentClass || !student.nipOrNis)) {
     throw new Error('Nama, email, kelas, dan NIS wajib diisi pada sheet Siswa.');
   }
+  if ([...dataset.teachers, ...dataset.students].some((account) => account.password && account.password.length < 6)) {
+    throw new Error('Password akun demo minimal 6 karakter.');
+  }
   if (dataset.schedules.some((schedule) =>
     !Number.isInteger(schedule.dayOfWeek) || schedule.dayOfWeek < 1 || schedule.dayOfWeek > 5 ||
     !/^([01]\d|2[0-3]):[0-5]\d$/.test(schedule.startTime) ||
@@ -77,10 +80,11 @@ export async function parseDemoWorkbook(input: ArrayBuffer): Promise<DemoDataset
 
   const dataset: DemoDataset = {
     classrooms: classrooms.map((row) => ({ name: row.name, code: row.code, level: row.level, program: row.program })),
-    teachers: teachers.map((row) => ({ name: row.name, email: row.email, role: 'TEACHER' })),
+    teachers: teachers.map((row) => ({ name: row.name, email: row.email, password: row.password || undefined, role: 'TEACHER' })),
     students: students.map((row) => ({
       name: row.name,
       email: row.email,
+      password: row.password || undefined,
       studentClass: row.studentClass,
       nipOrNis: row.nipOrNis,
       classroomCode: row.classroomCode,
@@ -106,6 +110,7 @@ export async function importDemoDataset(prisma: PrismaClient, dataset: DemoDatas
     ...dataset.students.map((student) => ({
       name: student.name,
       email: student.email,
+      password: student.password,
       role: 'STUDENT',
       studentClass: student.studentClass,
       nipOrNis: student.nipOrNis,
@@ -130,7 +135,7 @@ export async function importDemoDataset(prisma: PrismaClient, dataset: DemoDatas
   for (let start = 0; start < newAccounts.length; start += 20) {
     const batch = newAccounts.slice(start, start + 20);
     const hashedBatch = await Promise.all(batch.map(async (account) => {
-      const password = randomBytes(12).toString('base64url');
+      const password = account.password || randomBytes(12).toString('base64url');
       credentials.push({ email: account.email, role: account.role, password });
       return { ...account, password: await bcrypt.hash(password, 8) };
     }));
