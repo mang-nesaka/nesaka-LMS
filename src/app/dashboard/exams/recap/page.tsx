@@ -20,8 +20,12 @@ export default async function ExamRecapPage() {
     redirect('/dashboard');
   }
 
-  // Ambil semua hasil ujian CBT siswa
+  // Guru hanya boleh melihat hasil ujian dari kursus yang dia kelola.
+  // Admin, kepala sekolah, dan waka kurikulum tetap dapat melihat seluruh hasil.
   const examResults = await prisma.examResult.findMany({
+    where: currentUser.role === 'TEACHER'
+      ? { exam: { is: { course: { is: { teacherId: currentUser.id } } } } }
+      : {},
     include: {
       student: {
         select: {
