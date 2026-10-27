@@ -7,7 +7,7 @@ async function main() {
   const schoolSetting = await prisma.schoolSetting.upsert({
     where: { id: 'default' },
     update: {
-      schoolName: 'SMK Nesaka (SMKN 1)',
+      schoolName: 'SMK Negeri 1 kandanghaur',
       schoolLat: -6.9175,
       schoolLng: 107.6191,
       radiusMeters: 200.0,
@@ -17,7 +17,7 @@ async function main() {
     },
     create: {
       id: 'default',
-      schoolName: 'SMK Nesaka (SMKN 1)',
+      schoolName: 'SMK Negeri 1 kandanghaur',
       schoolLat: -6.9175,
       schoolLng: 107.6191,
       radiusMeters: 200.0,

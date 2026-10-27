@@ -74,7 +74,7 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
     if (user.role === 'TU') {
       return [
         { name: 'Dashboard TU', href: '/dashboard', icon: LayoutDashboard },
-        { name: 'Data Seluruh Siswa', href: '/dashboard/students', icon: Users },
+        { name: 'Manajemen', href: '/dashboard/management', icon: Users },
         { name: 'Verifikasi Dokumen Siswa', href: '/dashboard/documents', icon: FileCheck },
         { name: 'Rekap Dapodik (F-PD)', href: '/dashboard/dapodik', icon: FileSpreadsheet },
         { name: 'Koreksi Data Diri Siswa', href: '/dashboard/tu/corrections', icon: AlertCircle },
@@ -154,7 +154,7 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
       { name: 'Berita Acara Kegiatan', href: '/dashboard/berita-acara', icon: FileSignature },
       { name: 'Barcode Ruang Kelas', href: '/dashboard/classrooms', icon: QrCode },
       { name: 'Jadwal Mengajar', href: '/dashboard/classrooms/schedules', icon: Clock },
-      { name: 'Manajemen Siswa (TU)', href: '/dashboard/students', icon: Users },
+      { name: 'Manajemen', href: '/dashboard/management', icon: Users },
       { name: 'Verifikasi Dokumen (TU)', href: '/dashboard/documents', icon: FileCheck },
       { name: 'Koreksi Data Diri (TU)', href: '/dashboard/tu/corrections', icon: AlertCircle },
       { name: 'Rekap Dapodik (TU)', href: '/dashboard/dapodik', icon: FileSpreadsheet },

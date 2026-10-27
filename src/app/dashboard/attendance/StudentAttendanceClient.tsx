@@ -36,8 +36,6 @@ export default function StudentAttendanceClient({ student, attendance, setting, 
   const router = useRouter();
   const [photo, setPhoto] = useState<string | null>(null);
   const [isCameraActive, setIsCameraActive] = useState(false);
-  const [isCameraStarting, setIsCameraStarting] = useState(false);
-  const [cameraError, setCameraError] = useState<string | null>(null);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [distance, setDistance] = useState<number | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
@@ -46,29 +44,6 @@ export default function StudentAttendanceClient({ student, attendance, setting, 
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-
-  useEffect(() => {
-    if (!isCameraActive || !videoRef.current || !streamRef.current) return;
-
-    const video = videoRef.current;
-    const stream = streamRef.current;
-    video.srcObject = stream;
-    void video.play().catch(() => {
-      setCameraError('Izin kamera diberikan, tetapi video tidak dapat diputar. Tutup aplikasi kamera lain lalu coba lagi.');
-      stream.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-      setIsCameraActive(false);
-    });
-
-    return () => {
-      if (video.srcObject === stream) video.srcObject = null;
-    };
-  }, [isCameraActive]);
-
-  useEffect(() => () => {
-    streamRef.current?.getTracks().forEach((track) => track.stop());
-  }, []);
 
   // Calculate distance in meters
   const calcDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -112,36 +87,29 @@ export default function StudentAttendanceClient({ student, attendance, setting, 
 
   // Start Camera
   const startCamera = async () => {
-    if (streamRef.current || isCameraStarting) return;
-    setCameraError(null);
-
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setCameraError('Akses kamera tidak tersedia. Buka halaman melalui HTTPS dan gunakan browser yang mendukung kamera.');
-      return;
-    }
-
-    setIsCameraStarting(true);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'user' }, width: { ideal: 640 }, height: { ideal: 480 } },
+        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
         audio: false,
       });
-      streamRef.current = stream;
-      setIsCameraActive(true);
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play();
+        setIsCameraActive(true);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'izin kamera belum diberikan';
-      setCameraError(`Gagal mengakses kamera: ${message}. Pastikan izin kamera aktif dan kamera tidak sedang digunakan aplikasi lain.`);
-    } finally {
-      setIsCameraStarting(false);
+      alert(`Gagal mengakses kamera: ${message}. Pastikan izin kamera telah diberikan.`);
     }
   };
 
   // Stop Camera
   const stopCamera = () => {
-    streamRef.current?.getTracks().forEach((track) => track.stop());
-    streamRef.current = null;
-    if (videoRef.current) videoRef.current.srcObject = null;
-    setIsCameraActive(false);
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getTracks().forEach((track) => track.stop());
+      setIsCameraActive(false);
+    }
   };
 
   // Take Snapshot
@@ -149,12 +117,8 @@ export default function StudentAttendanceClient({ student, attendance, setting, 
     if (getNextAttendanceType(attendance) && videoRef.current && canvasRef.current) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
-      if (!video.videoWidth || !video.videoHeight) {
-        setCameraError('Pratinjau kamera sedang disiapkan. Tunggu sebentar lalu coba ambil foto lagi.');
-        return;
-      }
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
       const ctx = canvas.getContext('2d');
       if (ctx) {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -247,23 +211,17 @@ export default function StudentAttendanceClient({ student, attendance, setting, 
             )}
             <canvas ref={canvasRef} className="hidden" />
           </div>
-          {cameraError && (
-            <p role="alert" className="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs leading-relaxed text-rose-700">
-              {cameraError}
-            </p>
-          )}
 
           {/* Action Buttons Kamera */}
           <div className="mt-4 flex gap-3">
             {nextAttendanceType && !photo && !isCameraActive && (
               <button
                 type="button"
-                onClick={() => void startCamera()}
-                disabled={isCameraStarting}
+                onClick={startCamera}
                 className="flex-1 py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-xs transition-colors flex items-center justify-center gap-2"
               >
                 <Camera className="w-4 h-4" />
-                <span>{isCameraStarting ? 'Membuka kamera...' : 'Buka Kamera Selfie'}</span>
+                <span>Buka Kamera Selfie</span>
               </button>
             )}
 
