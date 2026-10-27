@@ -1,4 +1,4 @@
-package com.example.eduspace.model
+package com.example.nesaka.model
 
 import kotlinx.serialization.Serializable
 

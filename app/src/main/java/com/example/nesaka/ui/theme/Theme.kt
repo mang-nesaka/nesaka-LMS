@@ -1,4 +1,4 @@
-package com.example.eduspace.ui.theme
+package com.example.nesaka.ui.theme
 
 import android.app.Activity
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -50,7 +50,7 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 @Composable
-fun EduSpaceTheme(
+fun NesakaTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {

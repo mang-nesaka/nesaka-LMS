@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.eduspace"
+    namespace = "com.example.nesaka"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.aistudio.eduspace.kxmpzq"
+        applicationId = "com.aistudio.nesaka.kxmpzq"
         minSdk = 26
         targetSdk = 36
         versionCode = 1

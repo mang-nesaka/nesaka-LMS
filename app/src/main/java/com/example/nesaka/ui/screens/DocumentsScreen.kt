@@ -1,4 +1,4 @@
-package com.example.eduspace.ui.screens
+package com.example.nesaka.ui.screens
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -15,10 +15,10 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.eduspace.data.LmsRepository
-import com.example.eduspace.model.StudentDocument
-import com.example.eduspace.model.UserRole
-import com.example.eduspace.ui.theme.*
+import com.example.nesaka.data.LmsRepository
+import com.example.nesaka.model.StudentDocument
+import com.example.nesaka.model.UserRole
+import com.example.nesaka.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

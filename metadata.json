@@ -1,5 +1,5 @@
 {
-  "name": "EduSpace LMS",
+  "name": "Nesaka LMS",
   "description": "Sistem Manajemen Pembelajaran Digital (LMS) Sekolah dengan Ujian CBT Anti-Kecurangan, Presensi GPS & Wajah, Agenda Barcode Kelas, dan Formulir Dapodik F-PD.",
   "requestFramePermissions": [
     "camera",

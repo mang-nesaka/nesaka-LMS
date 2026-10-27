@@ -1,4 +1,4 @@
-package com.example.eduspace
+package com.example.nesaka
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -26,11 +26,11 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.eduspace.data.LmsRepository
-import com.example.eduspace.model.UserRole
-import com.example.eduspace.ui.navigation.Screen
-import com.example.eduspace.ui.screens.*
-import com.example.eduspace.ui.theme.*
+import com.example.nesaka.data.LmsRepository
+import com.example.nesaka.model.UserRole
+import com.example.nesaka.ui.navigation.Screen
+import com.example.nesaka.ui.screens.*
+import com.example.nesaka.ui.theme.*
 
 class MainActivity : ComponentActivity() {
     private val repository = LmsRepository()
@@ -40,7 +40,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            EduSpaceTheme {
+            NesakaTheme {
                 MainAppScaffold(repository = repository)
             }
         }
@@ -80,7 +80,7 @@ fun MainAppScaffold(repository: LmsRepository) {
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
                             Text(
-                                text = "EduSpace LMS",
+                                text = "Nesaka LMS",
                                 fontWeight = FontWeight.Black,
                                 fontSize = 16.sp,
                                 color = Slate900
@@ -314,7 +314,7 @@ fun MainAppScaffold(repository: LmsRepository) {
                     .navigationBarsPadding(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text("Semua Modul LMS EduSpace", fontWeight = FontWeight.Black, fontSize = 16.sp, color = Slate900)
+                Text("Semua Modul LMS Nesaka", fontWeight = FontWeight.Black, fontSize = 16.sp, color = Slate900)
                 Text("Pilih fitur yang ingin Anda buka:", fontSize = 12.sp, color = Slate500)
                 Spacer(modifier = Modifier.height(4.dp))
 

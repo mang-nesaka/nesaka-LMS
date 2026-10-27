@@ -1,6 +1,6 @@
-package com.example.eduspace.data
+package com.example.nesaka.data
 
-import com.example.eduspace.model.*
+import com.example.nesaka.model.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

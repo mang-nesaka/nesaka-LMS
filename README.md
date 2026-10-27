@@ -1,4 +1,4 @@
-# EduSpace LMS - Android Application
+# Nesaka LMS - Android Application
 
 A comprehensive School Learning Management System (LMS) rewritten for Android using Kotlin and Jetpack Compose, based on `mang-nesaka/nesaka-LMS`.
 

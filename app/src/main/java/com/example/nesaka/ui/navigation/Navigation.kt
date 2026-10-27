@@ -1,4 +1,4 @@
-package com.example.eduspace.ui.navigation
+package com.example.nesaka.ui.navigation
 
 import androidx.compose.ui.graphics.vector.ImageVector
 
@@ -30,5 +30,5 @@ data class NavItem(
     val label: String,
     val selectedIcon: ImageVector,
     val unselectedIcon: ImageVector,
-    val allowedRoles: List<com.example.eduspace.model.UserRole> = emptyList()
+    val allowedRoles: List<com.example.nesaka.model.UserRole> = emptyList()
 )

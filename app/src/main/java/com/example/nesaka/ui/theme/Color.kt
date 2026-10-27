@@ -1,4 +1,4 @@
-package com.example.eduspace.ui.theme
+package com.example.nesaka.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

@@ -13,5 +13,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "EduSpace LMS"
+rootProject.name = "Nesaka LMS"
 include(":app")
