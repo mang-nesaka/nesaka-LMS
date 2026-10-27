@@ -21,6 +21,10 @@ export default async function ClassroomsPage() {
     redirect('/login');
   }
 
+  if (currentUser.role === 'TEACHER' || currentUser.role === 'WALI_KELAS') {
+    redirect('/dashboard');
+  }
+
   const classrooms = await getClassrooms();
 
   return (

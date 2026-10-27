@@ -7,7 +7,7 @@ import {
   LayoutDashboard, BookOpen, Users, FileText, Settings, 
   LogOut, Menu, FileSpreadsheet, Laptop, GraduationCap, 
   IdCard, ChevronRight, FileUp, FileCheck, Camera, QrCode, 
-  School, BarChart3, Radio, FileSignature, AlertCircle, MapPin, Clock
+  BarChart3, Radio, FileSignature, AlertCircle, MapPin, Clock
 } from 'lucide-react';
 import { useState } from 'react';
 import { logout } from '@/app/actions/auth';
