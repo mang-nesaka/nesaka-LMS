@@ -1,0 +1,3 @@
+#!/bin/sh
+# Push branch saat ini ke origin setelah commit berhasil.
+git push -u origin HEAD
