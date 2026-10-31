@@ -1,8 +1,9 @@
 "use client";
 
 import { useRef, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { GraduationCap, ShieldCheck, Trash2, Users } from 'lucide-react';
+import { GraduationCap, ShieldCheck, Trash2, Users, QrCode, PhoneOff } from 'lucide-react';
 import { createTeacherAccount, clearDemoAccounts } from '@/app/actions/management';
 import ImportForm from '@/app/dashboard/students/ImportForm';
 import DemoDataImportForm from '@/app/dashboard/students/DemoDataImportForm';
@@ -109,9 +110,27 @@ export default function ManagementHub({
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold text-slate-900">Manajemen</h1>
-        <p className="text-sm text-slate-500">Kelola data siswa, akun guru, dan data demo sekolah.</p>
+      <header className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Manajemen</h1>
+          <p className="text-sm text-slate-500">Kelola data siswa, akun guru, dan data demo sekolah.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/dashboard/tu/attendance-scan"
+            className="px-3 py-1.5 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 text-xs font-bold hover:bg-emerald-100 transition-colors flex items-center gap-1.5"
+          >
+            <QrCode className="w-4 h-4 text-emerald-600" />
+            <span>Scan Presensi TU</span>
+          </Link>
+          <Link
+            href="/dashboard/tu/non-smartphone"
+            className="px-3 py-1.5 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-xs font-bold hover:bg-amber-100 transition-colors flex items-center gap-1.5"
+          >
+            <PhoneOff className="w-4 h-4 text-amber-600" />
+            <span>Siswa Non-Smartphone</span>
+          </Link>
+        </div>
       </header>
 
       <div role="tablist" aria-label="Bagian manajemen" className="flex overflow-x-auto border-b border-slate-200">

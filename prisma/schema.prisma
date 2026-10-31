@@ -20,6 +20,7 @@ model User {
   studentClass String?  // e.g. "X RPL 1"
   waliKelasOf  String?  // e.g. "X RPL 1"
   nipOrNis     String?  // NIP / NIS
+  hasSmartphone Boolean @default(true) // Status kepemilikan smartphone untuk presensi
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -279,6 +280,7 @@ model StudentAttendance {
   checkOutLng         Float?
   checkOutStatus      String?   // "PULANG", "BOLOS"
   notes               String?
+  scannedByTuId       String?   // ID akun staf TU yang memindai kartu presensi siswa
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
