@@ -267,7 +267,7 @@ export default function DigitalStudentCard({ data }: { data: StudentCardData }) 
                     <p className="text-[10px] text-blue-200 uppercase tracking-widest font-semibold">
                       {isStudent ? 'KARTU TANDA PELAJAR DIGITAL' : 'KARTU IDENTITAS PENDIDIK'}
                     </p>
-                    <p className="text-[8px] text-slate-300">NPSN: 20217354 • Terakreditasi A (Unggul)</p>
+                    <p className="text-[8px] text-slate-300">NPSN: 20216003 • Terakreditasi A (Unggul)</p>
                   </div>
                 </div>
 
@@ -379,9 +379,9 @@ export default function DigitalStudentCard({ data }: { data: StudentCardData }) 
                 {/* Stempel Digital & Tanda Tangan */}
                 <div className="text-right flex items-center gap-2">
                   <div className="text-[7px] sm:text-[8px] leading-tight text-slate-300 text-right">
-                    <p>Purwakarta, Juli 2026</p>
+                    <p>Kandanghaur</p>
                     <p className="font-semibold text-white">Kepala Sekolah,</p>
-                    <p className="font-extrabold text-yellow-300 mt-2 underline">Drs. H. Mulyadi, M.Pd.</p>
+                    <p className="font-extrabold text-yellow-300 mt-2 underline">SARWA,SSS., M.M.</p>
                     <p className="text-[7px] text-slate-400">NIP. 19680512 199403 1 004</p>
                   </div>
 
@@ -423,7 +423,7 @@ export default function DigitalStudentCard({ data }: { data: StudentCardData }) 
               <div className="border-t border-slate-200 pt-2 flex flex-col sm:flex-row items-center justify-between gap-2">
                 <div className="text-[8px] text-slate-500 leading-tight text-center sm:text-left">
                   <p className="font-bold text-slate-700">SMKN 1 KANDANGHAUR (NESAKA)</p>
-                  <p>Jl. K.K Singawinata No. 83, Nagri Kidul, Purwakarta, Jawa Barat</p>
+                  <p>JL. RAYA ILIR NO,1 KECAMATAN KANDANGHAUR KABUPATEN INDRAMAYU Jawa Barat</p>
                   <p>Telp: (0264) 200142 • Website: www.smkn1kandanghaur.sch.id</p>
                 </div>
 

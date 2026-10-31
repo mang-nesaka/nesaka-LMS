@@ -53,7 +53,7 @@ export default function LoginPage() {
               <GraduationCap className="w-8 h-8" />
             </div>
             <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-              Masuk ke LMS EduSpace
+              Masuk ke LMS Nesaka
             </h2>
             <p className="text-slate-500 text-xs sm:text-sm mt-1.5">
               Masukkan email dan kata sandi akun Anda untuk melanjutkan

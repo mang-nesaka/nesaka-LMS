@@ -31,7 +31,7 @@ export default function Home() {
             <GraduationCap className="w-10 h-10 text-white" />
           </motion.div>
           <h1 className="text-4xl md:text-5xl font-black text-slate-800 mb-3 tracking-tight">
-            LMS <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">EduSpace</span>
+            LMS <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">Nesaka</span>
           </h1>
           <p className="text-slate-600 text-base md:text-lg max-w-2xl mx-auto">
             Sistem Manajemen Pembelajaran Digital Terintegrasi dengan Fitur Ujian CBT Anti-Kecurangan, Dapodik Resmi, dan Manajemen Kelas Interaktif.

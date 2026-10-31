@@ -81,7 +81,7 @@ export default async function DashboardPage() {
               Portal Belajar Siswa
             </span>
             <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-              Halo, {currentUser.name}! 👋
+              Halo, {currentUser.name}! 
             </h2>
             <p className="text-blue-100 text-sm sm:text-base mt-2">
               Selamat datang di ruang pembelajaran mandiri. Tetap fokus belajar, selesaikan tugas harian, dan bersiap untuk Ujian CBT berikutnya.
