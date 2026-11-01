@@ -73,8 +73,8 @@ export default function JoinButton({ courseId, isEnrolled, isLoggedIn, isStudent
       setTimeout(() => {
         router.push('/dashboard/courses');
       }, 1200);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Gagal bergabung ke kelas.');
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Gagal bergabung ke kelas.');
       setLoading(false);
     }
   }

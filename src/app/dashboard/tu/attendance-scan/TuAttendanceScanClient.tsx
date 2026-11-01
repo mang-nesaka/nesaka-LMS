@@ -7,6 +7,16 @@ import {
   UserCheck, QrCode, PhoneOff, History, User, Volume2, VolumeX, X
 } from 'lucide-react';
 import { scanStudentBarcodeByTu } from '@/app/actions/tuAttendance';
+import type { findStudentByIdentifier, getTuScanTodayHistory } from '@/app/actions/tuAttendance';
+
+type ScanHistoryItem = Awaited<ReturnType<typeof getTuScanTodayHistory>>[number];
+type ScanResult = {
+  type: 'IN' | 'OUT';
+  status: 'HADIR' | 'TERLAMBAT' | 'PULANG' | 'BOLOS';
+  lateMinutes: number;
+  message: string;
+  student: NonNullable<Awaited<ReturnType<typeof findStudentByIdentifier>>>;
+};
 
 interface Props {
   currentUser: {
@@ -20,7 +30,7 @@ interface Props {
     checkInLateTime: string;
     checkOutStartTime: string;
   };
-  initialHistory: any[];
+  initialHistory: ScanHistoryItem[];
 }
 
 export default function TuAttendanceScanClient({ currentUser, setting, initialHistory }: Props) {
@@ -29,8 +39,8 @@ export default function TuAttendanceScanClient({ currentUser, setting, initialHi
   const [isScanningCamera, setIsScanningCamera] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
-  const [lastScannedResult, setLastScannedResult] = useState<any | null>(null);
-  const [history, setHistory] = useState<any[]>(initialHistory);
+  const [lastScannedResult, setLastScannedResult] = useState<ScanResult | null>(null);
+  const [history, setHistory] = useState<ScanHistoryItem[]>(initialHistory);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -41,7 +51,10 @@ export default function TuAttendanceScanClient({ currentUser, setting, initialHi
   const playSound = (success: boolean) => {
     if (!soundEnabled || typeof window === 'undefined') return;
     try {
-      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const audioContextConstructor = window.AudioContext ||
+        (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!audioContextConstructor) return;
+      const audioCtx = new audioContextConstructor();
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
       osc.connect(gain);
@@ -85,27 +98,26 @@ export default function TuAttendanceScanClient({ currentUser, setting, initialHi
         setLastScannedResult(null);
       } else if (res.success && res.attendance && res.student) {
         playSound(true);
-        setLastScannedResult(res);
+        setLastScannedResult({
+          type: res.type,
+          status: res.status,
+          lateMinutes: res.lateMinutes,
+          message: res.message,
+          student: res.student,
+        });
         setBarcodeInput('');
         // Perbarui riwayat
         setHistory((prev) => [
           {
-            id: res.attendance!.id,
-            date: res.attendance!.date,
-            checkInTime: res.attendance!.checkInTime,
-            checkInStatus: res.attendance!.checkInStatus,
-            checkInLateMinutes: res.attendance!.checkInLateMinutes,
-            checkOutTime: res.attendance!.checkOutTime,
-            checkOutStatus: res.attendance!.checkOutStatus,
-            notes: res.attendance!.notes,
-            student: res.student!,
+            ...res.attendance,
+            student: res.student,
           },
           ...prev.filter((item) => item.student?.id !== res.student!.id),
         ]);
       }
-    } catch (err: any) {
+    } catch (err) {
       playSound(false);
-      setErrorMessage(err.message || 'Terjadi kesalahan sistem saat memproses presensi.');
+      setErrorMessage(err instanceof Error ? err.message : 'Terjadi kesalahan sistem saat memproses presensi.');
     } finally {
       setIsSubmitting(false);
       // Debounce camera scanner so it doesn't repeatedly scan the same card in 2.5s
@@ -143,9 +155,10 @@ export default function TuAttendanceScanClient({ currentUser, setting, initialHi
         }
       );
       scannerControlsRef.current = controls;
-    } catch (err: any) {
+    } catch (err) {
       setIsScanningCamera(false);
-      setErrorMessage(`Gagal mengaktifkan kamera: ${err.message}. Pastikan izin kamera telah disetujui.`);
+      const message = err instanceof Error ? err.message : 'Kesalahan tidak diketahui';
+      setErrorMessage(`Gagal mengaktifkan kamera: ${message}. Pastikan izin kamera telah disetujui.`);
     }
   };
 

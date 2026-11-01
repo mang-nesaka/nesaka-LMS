@@ -29,9 +29,8 @@ export default async function ExamsPage() {
   }
 
   // Jika Guru/Admin: Ambil seluruh ujian yang diajar beserta hasil submission siswa
-  let teacherExams: any[] = [];
-  if (isTeacherOrAdmin && userId) {
-    teacherExams = await prisma.exam.findMany({
+  const teacherExams = isTeacherOrAdmin && userId
+    ? await prisma.exam.findMany({
       where: currentUser?.role === 'ADMIN' ? {} : {
         course: { teacherId: userId }
       },
@@ -46,13 +45,12 @@ export default async function ExamsPage() {
         },
       },
       orderBy: { createdAt: 'desc' },
-    });
-  }
+    })
+    : [];
 
   // Jika Siswa: Ambil ujian dari kelas yang diikutinya
-  let studentExams: any[] = [];
-  if (isStudent && userId) {
-    studentExams = await prisma.exam.findMany({
+  const studentExams = isStudent && userId
+    ? await prisma.exam.findMany({
       where: {
         course: {
           enrollments: {
@@ -68,8 +66,8 @@ export default async function ExamsPage() {
         },
       },
       orderBy: { createdAt: 'desc' },
-    });
-  }
+    })
+    : [];
 
   return (
     <div className="space-y-8">
@@ -336,7 +334,7 @@ export default async function ExamsPage() {
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
-                              {exam.results.map((res: any) => (
+                              {exam.results.map((res) => (
                                 <tr key={res.id} className="hover:bg-slate-50/50">
                                   <td className="py-2.5 font-semibold text-slate-800">
                                     {res.student.name}

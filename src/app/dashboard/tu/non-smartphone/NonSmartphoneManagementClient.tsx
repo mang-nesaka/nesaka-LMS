@@ -7,21 +7,9 @@ import {
   Printer, CheckCircle2, Clock, AlertCircle, QrCode, X, RefreshCw
 } from 'lucide-react';
 import { toggleStudentSmartphoneStatus } from '@/app/actions/tuAttendance';
+import type { getNonSmartphoneStudents } from '@/app/actions/tuAttendance';
 
-interface StudentItem {
-  id: string;
-  name: string;
-  email: string;
-  studentClass: string | null;
-  nipOrNis: string | null;
-  hasSmartphone: boolean;
-  avatarUrl: string | null;
-  dapodikForm: {
-    nisn: string | null;
-    nis: string | null;
-  } | null;
-  attendances: any[];
-}
+type StudentItem = Awaited<ReturnType<typeof getNonSmartphoneStudents>>['students'][number];
 
 interface Props {
   currentUser: {
@@ -77,8 +65,9 @@ export default function NonSmartphoneManagementClient({
         );
         setActionMessage(res.message);
       }
-    } catch (err: any) {
-      alert(`Gagal mengubah status: ${err.message}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Kesalahan tidak diketahui';
+      alert(`Gagal mengubah status: ${message}`);
     } finally {
       setUpdatingId(null);
     }

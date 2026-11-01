@@ -18,8 +18,8 @@ export default function ImportForm() {
       // Reset form
       const fileInput = document.getElementById('file-upload') as HTMLInputElement;
       if (fileInput) fileInput.value = '';
-    } catch (err: any) {
-      setMessage({ type: 'error', text: err.message || 'Terjadi kesalahan saat impor.' });
+    } catch (err) {
+      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Terjadi kesalahan saat impor.' });
     }
     
     setLoading(false);

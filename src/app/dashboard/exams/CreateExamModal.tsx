@@ -23,8 +23,8 @@ export default function CreateExamModal({ courses }: { courses: CourseOption[] }
     try {
       await createExamFromExcel(formData);
       setIsOpen(false);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Gagal mengunggah soal ujian.');
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Gagal mengunggah soal ujian.');
     } finally {
       setLoading(false);
     }

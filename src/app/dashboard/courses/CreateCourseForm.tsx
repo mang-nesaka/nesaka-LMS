@@ -68,8 +68,8 @@ export default function CreateCourseForm() {
       setSubject('');
       setTargetClass('');
       setDescription('');
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Gagal membuat kelas.');
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Gagal membuat kelas.');
     } finally {
       setLoading(false);
     }

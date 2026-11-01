@@ -2,13 +2,14 @@
 
 import { useState } from 'react';
 import { saveDapodikForm } from '@/app/actions/dapodik';
+import type { DapodikForm } from '@prisma/client';
 import { 
   User, CheckCircle2, AlertCircle, FileCheck, 
   MapPin, HeartHandshake, Award, ShieldAlert, Send
 } from 'lucide-react';
 
 interface Props {
-  existingData: any;
+  existingData: DapodikForm | null;
   defaultStudentName: string;
 }
 
@@ -19,7 +20,7 @@ export default function DapodikClientForm({ existingData, defaultStudentName }: 
 
   // Jika siswa sudah pernah mengisi form
   if (existingData || success) {
-    const data = existingData || {};
+    const data: Partial<DapodikForm> = existingData || {};
     return (
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 sm:p-8 flex items-start gap-4">
@@ -95,8 +96,8 @@ export default function DapodikClientForm({ existingData, defaultStudentName }: 
     try {
       await saveDapodikForm(formData);
       setSuccess(true);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Gagal menyimpan formulir. Mohon periksa kembali.');
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Gagal menyimpan formulir. Mohon periksa kembali.');
     } finally {
       setLoading(false);
     }

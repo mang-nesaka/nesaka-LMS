@@ -71,8 +71,8 @@ export default function TuDocumentsVerification({
       await verifyDocumentAction(activeModalDoc.doc.id, status, feedbackInput);
       setActiveModalDoc(null);
       setFeedbackInput('');
-    } catch (err: any) {
-      alert(err.message || 'Gagal memproses verifikasi.');
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Gagal memproses verifikasi.');
     } finally {
       setIsProcessing(false);
     }

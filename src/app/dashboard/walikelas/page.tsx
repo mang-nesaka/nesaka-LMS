@@ -27,7 +27,7 @@ export default async function WaliKelasPage({ searchParams }: { searchParams: Pr
 
   // Tentukan kelas yang ditampilkan
   // Jika wali kelas, utamakan kelas yang diwalikannya
-  let selectedClass = params.class || currentUser.waliKelasOf || (classrooms[0]?.name ?? 'X RPL 1');
+  const selectedClass = params.class || currentUser.waliKelasOf || (classrooms[0]?.name ?? 'X RPL 1');
   const selectedPeriod = (params.period as 'daily' | 'weekly' | 'monthly' | 'semester') || 'daily';
 
   const { students, today } = await getClassAttendanceRecap({

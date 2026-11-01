@@ -85,8 +85,8 @@ export default function StudentDocumentsClient({ documents, studentName }: Stude
 
     try {
       await uploadStudentDocument(formData);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Gagal mengunggah dokumen.');
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Gagal mengunggah dokumen.');
     } finally {
       setLoadingDocType(null);
       e.target.value = '';
@@ -99,8 +99,8 @@ export default function StudentDocumentsClient({ documents, studentName }: Stude
     setLoadingDocType(docType);
     try {
       await deleteStudentDocument(docType);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Gagal menghapus dokumen.');
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Gagal menghapus dokumen.');
     } finally {
       setLoadingDocType(null);
     }

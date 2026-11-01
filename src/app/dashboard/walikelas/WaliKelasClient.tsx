@@ -2,6 +2,9 @@
 
 import { useRouter } from 'next/navigation';
 import { Users, Calendar, Clock, CheckCircle, AlertTriangle, Printer, School, UserCheck } from 'lucide-react';
+import type { getClassAttendanceRecap } from '@/app/actions/attendance';
+
+type AttendanceStudent = Awaited<ReturnType<typeof getClassAttendanceRecap>>['students'][number];
 
 interface Props {
   user: {
@@ -13,7 +16,7 @@ interface Props {
   classrooms: Array<{ id: string; name: string }>;
   selectedClass: string;
   selectedPeriod: 'daily' | 'weekly' | 'monthly' | 'semester';
-  students: any[];
+  students: AttendanceStudent[];
   today: string;
 }
 
@@ -38,7 +41,7 @@ export default function WaliKelasClient({
   let countBelum = 0;
 
   students.forEach((s) => {
-    const todayAtt = s.attendances?.find((a: any) => a.date === today);
+    const todayAtt = s.attendances?.find((attendance) => attendance.date === today);
     if (!todayAtt) {
       countBelum++;
     } else {

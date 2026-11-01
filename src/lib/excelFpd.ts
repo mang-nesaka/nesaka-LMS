@@ -1,4 +1,9 @@
 import ExcelJS from 'exceljs';
+import type { Prisma } from '@prisma/client';
+
+type FpdRecord = Prisma.DapodikFormGetPayload<{
+  include: { student: { select: { email: true } } };
+}>;
 
 const BORDER_BOX: Partial<ExcelJS.Borders> = {
   top: { style: 'thin', color: { argb: 'FF000000' } },
@@ -13,7 +18,7 @@ const BLUE_FILL: ExcelJS.Fill = {
   fgColor: { argb: 'FF0070C0' }
 };
 
-export function populateExactFpdWorksheet(worksheet: ExcelJS.Worksheet, r: any, programTitle?: string) {
+export function populateExactFpdWorksheet(worksheet: ExcelJS.Worksheet, r: FpdRecord, programTitle?: string) {
   // Page setup agar ketika dicetak / di-export ke PDF pas dalam 1 halaman lebar (tidak terpotong ke samping)
   worksheet.pageSetup = {
     orientation: 'portrait',
@@ -289,14 +294,14 @@ export function populateExactFpdWorksheet(worksheet: ExcelJS.Worksheet, r: any, 
   setLabel(50, 11, ':');
   makeBox(50, 12, 17, r.penerimaKps || 'Tidak', 'center');
   setLabel(50, 19, 'No. KPS :');
-  makeBox(50, 24, 43, r.noKps || '');
+  makeBox(50, 24, 43, r.noKks || '');
 
   // Layak PIP (Row 52)
   setLabel(52, 2, '-    Usulan dari sekolah Layak PIP');
   setLabel(52, 11, ':');
   makeBox(52, 12, 17, r.usulanPip || 'Tidak', 'center');
   setLabel(52, 19, 'Alasan Layak :');
-  makeBox(52, 25, 43, r.alasanPip || 'Usulan sekolah');
+  makeBox(52, 25, 43, 'Usulan sekolah');
 
   // Penerima KIP (Row 53)
   setLabel(53, 2, '-    Penerima KIP');
@@ -497,7 +502,7 @@ export function populateExactFpdWorksheet(worksheet: ExcelJS.Worksheet, r: any, 
   worksheet.getCell(127, 30).alignment = { horizontal: 'center' };
 }
 
-export function buildExactFpdGrid(r: any, programTitle?: string): string[][] {
+export function buildExactFpdGrid(r: FpdRecord, programTitle?: string): string[][] {
   const grid: string[][] = Array.from({ length: 127 }, () => Array(43).fill(''));
   grid[0][0] = 'FORMULIR PESERTA DIDIK';
   grid[0][39] = 'F-PD';

@@ -3,9 +3,12 @@
 import { useState } from 'react';
 import { AlertCircle, CheckCircle, Clock, MessageSquare, Send, User, ChevronRight } from 'lucide-react';
 import { processCorrectionRequest } from '@/app/actions/correction';
+import type { getAllCorrectionRequests } from '@/app/actions/correction';
 
-export default function TuCorrectionsClient({ requests }: { requests: any[] }) {
-  const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
+type CorrectionRequest = Awaited<ReturnType<typeof getAllCorrectionRequests>>[number];
+
+export default function TuCorrectionsClient({ requests }: { requests: CorrectionRequest[] }) {
+  const [selectedRequest, setSelectedRequest] = useState<CorrectionRequest | null>(null);
   const [adminResponse, setAdminResponse] = useState('');
   const [isPending, setIsPending] = useState(false);
 

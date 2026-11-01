@@ -13,12 +13,11 @@ export default async function AssignmentsPage() {
   const isTeacherOrAdmin = currentUser?.role === 'TEACHER' || currentUser?.role === 'ADMIN';
 
   // Ambil list course untuk dropdown saat membuat tugas (Hanya untuk Guru/Admin)
-  let myCourses: any[] = [];
-  if (isTeacherOrAdmin && userId) {
-    myCourses = await prisma.course.findMany({
+  const myCourses = isTeacherOrAdmin && userId
+    ? await prisma.course.findMany({
       where: currentUser?.role === 'ADMIN' ? {} : { teacherId: userId }
-    });
-  }
+    })
+    : [];
 
   const isStudent = currentUser?.role === 'STUDENT';
 

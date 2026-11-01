@@ -32,6 +32,7 @@ export async function GET(request: NextRequest) {
       include: {
         student: {
           select: {
+            email: true,
             name: true,
             enrollments: {
               include: { course: { select: { title: true } } }
@@ -82,6 +83,7 @@ export async function GET(request: NextRequest) {
     include: {
       student: {
         select: {
+          email: true,
           name: true,
           enrollments: {
             include: { course: { select: { title: true } } }

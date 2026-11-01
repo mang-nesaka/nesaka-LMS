@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from '@/lib/prisma';
+import type { Prisma } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { requireRole } from '@/lib/auth';
 import { getSchoolSetting } from '@/app/actions/attendance';
@@ -247,7 +248,7 @@ export async function getNonSmartphoneStudents(filter?: { class?: string; search
   await requireRole('TU', 'ADMIN');
   const todayStr = getLocalDateString();
 
-  const where: any = { role: 'STUDENT' };
+  const where: Prisma.UserWhereInput = { role: 'STUDENT' };
   if (filter?.class && filter.class !== 'ALL') {
     where.studentClass = filter.class;
   }
