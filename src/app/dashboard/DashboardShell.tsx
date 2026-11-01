@@ -7,7 +7,8 @@ import {
   LayoutDashboard, BookOpen, Users, FileText, Settings, 
   LogOut, Menu, FileSpreadsheet, Laptop, GraduationCap, 
   IdCard, ChevronRight, FileUp, FileCheck, Camera, QrCode, 
-  School, BarChart3, Radio, FileSignature, AlertCircle, MapPin, Clock
+  School, BarChart3, Radio, FileSignature, AlertCircle, MapPin, Clock,
+  PhoneOff, UserCheck
 } from 'lucide-react';
 import { useState } from 'react';
 import { logout } from '@/app/actions/auth';
@@ -52,7 +53,6 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
         { name: 'Kelola Kelas', href: '/dashboard/courses', icon: BookOpen },
         { name: 'Tugas & Penilaian', href: '/dashboard/assignments', icon: FileText },
         { name: 'Ujian CBT', href: '/dashboard/exams', icon: Laptop },
-        { name: 'Barcode Ruang Kelas', href: '/dashboard/classrooms', icon: School },
         { name: 'Profil & Kartu Guru', href: '/dashboard/profile', icon: IdCard },
         { name: 'Pengaturan Akun', href: '/dashboard/settings', icon: Settings },
       ];
@@ -74,6 +74,8 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
     if (user.role === 'TU') {
       return [
         { name: 'Dashboard TU', href: '/dashboard', icon: LayoutDashboard },
+        { name: 'Presensi Siswa (Scan TU)', href: '/dashboard/tu/attendance-scan', icon: UserCheck },
+        { name: 'Siswa Non-Smartphone', href: '/dashboard/tu/non-smartphone', icon: PhoneOff },
         { name: 'Manajemen', href: '/dashboard/management', icon: Users },
         { name: 'Verifikasi Dokumen Siswa', href: '/dashboard/documents', icon: FileCheck },
         { name: 'Rekap Dapodik (F-PD)', href: '/dashboard/dapodik', icon: FileSpreadsheet },
@@ -154,6 +156,8 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
       { name: 'Berita Acara Kegiatan', href: '/dashboard/berita-acara', icon: FileSignature },
       { name: 'Barcode Ruang Kelas', href: '/dashboard/classrooms', icon: QrCode },
       { name: 'Jadwal Mengajar', href: '/dashboard/classrooms/schedules', icon: Clock },
+      { name: 'Presensi Siswa (Scan TU)', href: '/dashboard/tu/attendance-scan', icon: UserCheck },
+      { name: 'Siswa Non-Smartphone (TU)', href: '/dashboard/tu/non-smartphone', icon: PhoneOff },
       { name: 'Manajemen', href: '/dashboard/management', icon: Users },
       { name: 'Verifikasi Dokumen (TU)', href: '/dashboard/documents', icon: FileCheck },
       { name: 'Koreksi Data Diri (TU)', href: '/dashboard/tu/corrections', icon: AlertCircle },
