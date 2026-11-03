@@ -218,6 +218,24 @@ export async function importDemoDataset(prisma: PrismaClient, dataset: DemoDatas
     const existingScheduleKeys = new Set(existingSchedules.map(scheduleKey));
     const newScheduleRows = scheduleRows.filter((schedule) => !existingScheduleKeys.has(scheduleKey(schedule)));
     const scheduleResult = await tx.classTeachingSchedule.createMany({ data: newScheduleRows, skipDuplicates: true });
+    await tx.teacherClassroom.createMany({
+      data: scheduleRows.map(({ teacherId, classroomId }) => ({ teacherId, classroomId })),
+      skipDuplicates: true,
+    });
+
+    await Promise.all(dataset.classrooms.map(async (datasetClassroom) => {
+      const classroom = roomByCode.get(datasetClassroom.code);
+      if (!classroom) return;
+      const studentIds = dataset.students
+        .filter((student) => student.classroomCode === datasetClassroom.code)
+        .map((student) => userByEmail.get(student.email.toLowerCase())?.id)
+        .filter((id): id is string => Boolean(id));
+      if (studentIds.length === 0) return;
+      await tx.user.updateMany({
+        where: { id: { in: studentIds }, role: 'STUDENT' },
+        data: { classroomId: classroom.id, studentClass: classroom.name },
+      });
+    }));
 
     return {
       classroomsCreated: classroomResult.count,

@@ -20,6 +20,7 @@ export async function importDemoSchoolData(formData: FormData) {
   revalidatePath('/dashboard/students');
   revalidatePath('/dashboard/classrooms');
   revalidatePath('/dashboard/classrooms/schedules');
+  revalidatePath('/dashboard/management/class-assignments');
   revalidatePath('/dashboard/teacher-agenda');
 
   return result;

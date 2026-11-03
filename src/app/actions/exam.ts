@@ -315,3 +315,78 @@ export async function getExamResultReview(resultId: string) {
     }),
   };
 }
+
+export async function uploadExamGradeTemplate(formData: FormData) {
+  const currentUser = await requireRole('TEACHER', 'ADMIN');
+  const examId = formData.get('examId');
+  const file = formData.get('file');
+
+  if (typeof examId !== 'string' || !examId) throw new Error('Ujian tidak valid.');
+  if (!(file instanceof File) || !file.name.toLowerCase().endsWith('.xlsx')) {
+    throw new Error('Unggah file template Excel (.xlsx).');
+  }
+  if (file.size === 0 || file.size > 5 * 1024 * 1024) {
+    throw new Error('Ukuran file harus lebih dari 0 dan maksimal 5MB.');
+  }
+
+  const exam = await prisma.exam.findUnique({
+    where: { id: examId },
+    select: { course: { select: { teacherId: true } } },
+  });
+  if (!exam) throw new Error('Ujian tidak ditemukan.');
+  if (currentUser.role === 'TEACHER' && exam.course.teacherId !== currentUser.id) {
+    throw new Error('Anda hanya dapat mengolah nilai ujian yang Anda kelola.');
+  }
+
+  const workbook = new ExcelJS.Workbook();
+  const buffer = Buffer.from(await file.arrayBuffer());
+  await workbook.xlsx.load(buffer as unknown as Parameters<typeof workbook.xlsx.load>[0]);
+  const worksheet = workbook.worksheets[0];
+  if (!worksheet) throw new Error('Sheet template nilai tidak ditemukan.');
+
+  const expectedHeaders = ['ID Hasil (Jangan Diubah)', 'Nama Siswa', 'Kelas', 'NIS/NISN', 'Nilai Saat Ini', 'Nilai Baru'];
+  const actualHeaders = expectedHeaders.map((_, index) => String(worksheet.getCell(1, index + 1).value ?? '').trim());
+  if (expectedHeaders.some((header, index) => actualHeaders[index] !== header)) {
+    throw new Error('Format template tidak sesuai. Unduh template terbaru sebelum mengunggah.');
+  }
+
+  const updates: Array<{ id: string; score: number }> = [];
+  const seenIds = new Set<string>();
+  for (let rowNumber = 2; rowNumber <= worksheet.rowCount; rowNumber++) {
+    const row = worksheet.getRow(rowNumber);
+    const resultId = row.getCell(1).text.trim();
+    const rawScore = row.getCell(6).value;
+    if (!resultId && (rawScore === null || rawScore === undefined || rawScore === '')) continue;
+    if (!resultId) throw new Error(`ID hasil wajib diisi pada baris ${rowNumber}.`);
+    if (seenIds.has(resultId)) throw new Error(`ID hasil duplikat pada baris ${rowNumber}.`);
+    seenIds.add(resultId);
+
+    const score = typeof rawScore === 'number'
+      ? rawScore
+      : typeof rawScore === 'string'
+        ? Number(rawScore.trim().replace(',', '.'))
+        : Number.NaN;
+    if (!Number.isFinite(score) || score < 0 || score > 100 || Math.abs(score * 10 - Math.round(score * 10)) > 1e-8) {
+      throw new Error(`Nilai pada baris ${rowNumber} harus angka 0–100 dengan maksimal 1 angka desimal.`);
+    }
+    updates.push({ id: resultId, score });
+  }
+
+  if (updates.length === 0) throw new Error('Tidak ada nilai untuk diperbarui.');
+
+  const matchingResults = await prisma.examResult.findMany({
+    where: { id: { in: updates.map((update) => update.id) } },
+    select: { id: true, examId: true },
+  });
+  if (matchingResults.length !== updates.length || matchingResults.some((result) => result.examId !== examId)) {
+    throw new Error('Template berisi hasil ujian yang tidak sesuai dengan ujian terpilih.');
+  }
+
+  await prisma.$transaction(
+    updates.map(({ id, score }) => prisma.examResult.update({ where: { id }, data: { score } }))
+  );
+
+  revalidatePath('/dashboard/exams/recap');
+  revalidatePath('/dashboard/walikelas');
+  return { updatedCount: updates.length };
+}

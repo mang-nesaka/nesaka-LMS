@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { GraduationCap, ShieldCheck, Trash2, Users, QrCode, PhoneOff } from 'lucide-react';
+import { GraduationCap, ShieldCheck, Trash2, Users, QrCode, PhoneOff, School } from 'lucide-react';
 import { createTeacherAccount, clearDemoAccounts } from '@/app/actions/management';
 import ImportForm from '@/app/dashboard/students/ImportForm';
 import DemoDataImportForm from '@/app/dashboard/students/DemoDataImportForm';
@@ -116,6 +116,13 @@ export default function ManagementHub({
           <p className="text-sm text-slate-500">Kelola data siswa, akun guru, dan data demo sekolah.</p>
         </div>
         <div className="flex items-center gap-2">
+          <Link
+            href="/dashboard/management/class-assignments"
+            className="px-3 py-1.5 rounded-xl border border-teal-200 bg-teal-50 text-teal-800 text-xs font-bold hover:bg-teal-100 transition-colors flex items-center gap-1.5"
+          >
+            <School className="w-4 h-4" />
+            <span>Penempatan Kelas</span>
+          </Link>
           <Link
             href="/dashboard/tu/attendance-scan"
             className="px-3 py-1.5 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 text-xs font-bold hover:bg-emerald-100 transition-colors flex items-center gap-1.5"

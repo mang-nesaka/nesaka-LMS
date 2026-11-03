@@ -21,7 +21,9 @@ export async function getCurrentUser() {
       email: true,
       role: true,
       studentClass: true,
+      classroomId: true,
       waliKelasOf: true,
+      homeroomClassId: true,
     },
   });
 }

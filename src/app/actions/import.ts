@@ -33,22 +33,32 @@ export async function importStudentsCSV(formData: FormData) {
         const existingUser = await prisma.user.findUnique({ where: { email }, select: { id: true, role: true } });
         if (existingUser && existingUser.role !== 'STUDENT') continue;
         const passwordHash = await bcrypt.hash(password, 12);
+        const [classroom, course] = courseTitle
+          ? await Promise.all([
+            prisma.classroom.findUnique({ where: { name: courseTitle }, select: { id: true, name: true } }),
+            prisma.course.findFirst({ where: { title: courseTitle }, select: { id: true } }),
+          ])
+          : [null, null];
 
         // 1. Buat atau update User (Siswa)
         const user = await prisma.user.upsert({
           where: { email },
-          update: { name, password: passwordHash },
-          create: { name, email, password: passwordHash, role: 'STUDENT' }
+          update: {
+            name,
+            password: passwordHash,
+            ...(classroom ? { classroomId: classroom.id, studentClass: classroom.name } : {}),
+          },
+          create: {
+            name,
+            email,
+            password: passwordHash,
+            role: 'STUDENT',
+            ...(classroom ? { classroomId: classroom.id, studentClass: classroom.name } : {}),
+          },
         });
 
         // 2. Jika ada nama_kelas di CSV, masukkan siswa ke kelas tersebut
-        if (courseTitle) {
-          // Cari ID kelas berdasarkan nama kelasnya
-          const course = await prisma.course.findFirst({
-            where: { title: courseTitle }
-          });
-
-          if (course) {
+        if (course) {
             // Mendaftarkan siswa ke kelas tersebut (Enrollment)
             // Cek apakah sudah terdaftar
             const existingEnrollment = await prisma.enrollment.findUnique({
@@ -68,7 +78,6 @@ export async function importStudentsCSV(formData: FormData) {
                 }
               });
             }
-          }
         }
         successCount++;
       }
@@ -80,5 +89,6 @@ export async function importStudentsCSV(formData: FormData) {
   }
 
   revalidatePath('/dashboard/students');
+  revalidatePath('/dashboard/management/class-assignments');
   revalidatePath('/dashboard/assignments');
 }

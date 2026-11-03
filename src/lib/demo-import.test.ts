@@ -81,9 +81,13 @@ describe('demo workbook import format', () => {
         createMany: async () => ({ count: 0 }),
         findMany: userFindMany,
         update: updateUser,
+        updateMany: async ({ where }: { where: { id: { in: string[] } } }) => ({ count: where.id.in.length }),
       },
       classTeachingSchedule: {
         findMany: async () => [],
+        createMany: async ({ data }: { data: unknown[] }) => ({ count: data.length }),
+      },
+      teacherClassroom: {
         createMany: async ({ data }: { data: unknown[] }) => ({ count: data.length }),
       },
     };

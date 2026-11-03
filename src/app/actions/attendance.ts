@@ -293,23 +293,22 @@ export async function submitStudentAttendance(data: {
 
 export async function getClassAttendanceRecap(options: {
   className?: string;
+  classroomId?: string;
   period: 'daily' | 'weekly' | 'monthly' | 'semester';
   date?: string;
 }) {
   const currentUser = await requireRole('WALI_KELAS', 'ADMIN', 'KEPSEK', 'WAKA_KESISWAAN', 'TU');
-  const { className, period } = options;
+  const { className, classroomId, period } = options;
   const todayStr = getLocalDateString();
-  const effectiveClassName = currentUser.role === 'WALI_KELAS'
-    ? currentUser.waliKelasOf
-    : className;
-  if (currentUser.role === 'WALI_KELAS' && !effectiveClassName) {
-    throw new Error('Akun Wali Kelas belum memiliki kelas binaan.');
-  }
 
   // Query students
   const studentWhere: Prisma.UserWhereInput = { role: 'STUDENT' };
-  if (effectiveClassName && effectiveClassName !== 'ALL') {
-    studentWhere.studentClass = effectiveClassName;
+  if (currentUser.role === 'WALI_KELAS') {
+    studentWhere.classroomId = currentUser.homeroomClassId ?? '__no_assigned_class__';
+  } else if (classroomId) {
+    studentWhere.classroomId = classroomId;
+  } else if (className && className !== 'ALL') {
+    studentWhere.studentClass = className;
   }
 
   const students = await prisma.user.findMany({

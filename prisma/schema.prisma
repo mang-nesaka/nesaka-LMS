@@ -17,6 +17,8 @@ model User {
   password     String
   role         String   @default("STUDENT") // "ADMIN", "TEACHER", "STUDENT", "TU", "WALI_KELAS", "WAKA_KURIKULUM", "WAKA_KESISWAAN", "WAKA_SARPRAS", "WAKA_HUBDIN", "KEPSEK"
   avatarUrl    String?  @db.Text
+  classroomId  String?
+  homeroomClassId String? @unique
   studentClass String?  // e.g. "X RPL 1"
   waliKelasOf  String?  // e.g. "X RPL 1"
   nipOrNis     String?  // NIP / NIS
@@ -25,6 +27,9 @@ model User {
   updatedAt    DateTime @updatedAt
 
   coursesAsTeacher   Course[]                @relation("TeacherCourses")
+  classroom          Classroom?              @relation("ClassroomStudents", fields: [classroomId], references: [id], onDelete: SetNull)
+  homeroomClass      Classroom?              @relation("HomeroomTeacher", fields: [homeroomClassId], references: [id], onDelete: SetNull)
+  teachingClassrooms TeacherClassroom[]
   enrollments        Enrollment[]
   submissions        Submission[]
   dapodikForm        DapodikForm?
@@ -298,6 +303,21 @@ model Classroom {
 
   agendas      TeacherClassAgenda[]
   schedules    ClassTeachingSchedule[]
+  students     User[]                 @relation("ClassroomStudents")
+  homeroomTeacher User?               @relation("HomeroomTeacher")
+  teachers     TeacherClassroom[]
+}
+
+model TeacherClassroom {
+  teacherId   String
+  classroomId String
+  assignedAt  DateTime  @default(now())
+
+  teacher   User      @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+
+  @@id([teacherId, classroomId])
+  @@index([classroomId])
 }
 
 model ClassTeachingSchedule {

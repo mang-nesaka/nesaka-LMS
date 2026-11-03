@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from 'react';
-import { Download, Eye, Search, X } from 'lucide-react';
-import { getExamResultReview } from '@/app/actions/exam';
+import { useState, type FormEvent } from 'react';
+import { useRouter } from 'next/navigation';
+import { Download, Eye, FileUp, Search, X } from 'lucide-react';
+import { getExamResultReview, uploadExamGradeTemplate } from '@/app/actions/exam';
 import RichContent from '@/components/RichContent';
 
 type ReviewDetails = Awaited<ReturnType<typeof getExamResultReview>>;
@@ -36,18 +37,24 @@ interface ExamResultRow {
 interface Props {
   exams: ExamOption[];
   results: ExamResultRow[];
+  canManageGrades: boolean;
+  canReviewAnswers: boolean;
 }
 
 function escapeCsv(value: string | number) {
   return `"${String(value).replaceAll('"', '""')}"`;
 }
 
-export default function ExamGradesClient({ exams, results }: Props) {
+export default function ExamGradesClient({ exams, results, canManageGrades, canReviewAnswers }: Props) {
+  const router = useRouter();
   const [selectedExamId, setSelectedExamId] = useState('ALL');
   const [search, setSearch] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [review, setReview] = useState<ReviewDetails | null>(null);
   const [loadingReviewId, setLoadingReviewId] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const visibleResults = results.filter((result) => {
     const matchesExam = selectedExamId === 'ALL' || result.exam.id === selectedExamId;
@@ -58,6 +65,30 @@ export default function ExamGradesClient({ exams, results }: Props) {
     ? visibleResults.reduce((total, result) => total + result.score, 0) / visibleResults.length
     : 0;
   const totalViolations = visibleResults.reduce((total, result) => total + result.violationsCount, 0);
+
+  const handleUpload = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formElement = event.currentTarget;
+    if (!selectedFile || selectedExamId === 'ALL') return;
+
+    const formData = new FormData();
+    formData.set('examId', selectedExamId);
+    formData.set('file', selectedFile);
+    setIsUploading(true);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    try {
+      const result = await uploadExamGradeTemplate(formData);
+      setSuccessMessage(`${result.updatedCount} nilai berhasil diperbarui.`);
+      setSelectedFile(null);
+      formElement.reset();
+      router.refresh();
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : 'Gagal mengunggah template nilai.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const handleExport = () => {
     const rows = [
@@ -115,7 +146,7 @@ export default function ExamGradesClient({ exams, results }: Props) {
       <section className="bg-white border border-slate-200 rounded-xl overflow-hidden">
         <div className="p-4 border-b border-slate-200 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           <h2 className="font-bold text-slate-900">Hasil ujian siswa</h2>
-          <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2">
             <select
               value={selectedExamId}
               onChange={(event) => setSelectedExamId(event.target.value)}
@@ -137,6 +168,27 @@ export default function ExamGradesClient({ exams, results }: Props) {
                 className="h-10 w-full sm:w-56 rounded-lg border border-slate-300 pl-9 pr-3 text-sm text-slate-800"
               />
             </label>
+            {canManageGrades && (
+              selectedExamId === 'ALL' ? (
+                <button
+                  type="button"
+                  disabled
+                  title="Pilih satu ujian untuk membuat template"
+                  className="h-10 px-3 inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 text-slate-700 text-sm font-semibold opacity-40"
+                >
+                  <Download className="w-4 h-4" />
+                  Template nilai
+                </button>
+              ) : (
+                <a
+                  href={`/api/exams/grades/template?examId=${encodeURIComponent(selectedExamId)}`}
+                  className="h-10 px-3 inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-100"
+                >
+                  <Download className="w-4 h-4" />
+                  Template nilai
+                </a>
+              )
+            )}
             <button
               type="button"
               onClick={handleExport}
@@ -145,14 +197,42 @@ export default function ExamGradesClient({ exams, results }: Props) {
               className="h-10 px-3 inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 text-white text-sm font-semibold hover:bg-slate-700 disabled:opacity-40"
             >
               <Download className="w-4 h-4" />
-              Unduh CSV
+              Rekap CSV
             </button>
           </div>
         </div>
 
+        {canManageGrades && (
+          <form onSubmit={handleUpload} className="p-4 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row sm:items-center gap-3">
+            <label className="flex-1">
+              <span className="sr-only">Pilih template nilai Excel</span>
+              <input
+                type="file"
+                accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
+                disabled={selectedExamId === 'ALL' || isUploading}
+                className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-white file:px-3 file:py-2 file:text-sm file:font-semibold file:text-slate-700 file:shadow-sm disabled:opacity-50"
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={!selectedFile || selectedExamId === 'ALL' || isUploading}
+              className="h-10 px-4 inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-700 text-white text-sm font-semibold hover:bg-emerald-800 disabled:opacity-40"
+            >
+              <FileUp className="w-4 h-4" />
+              {isUploading ? 'Mengunggah...' : 'Unggah nilai'}
+            </button>
+          </form>
+        )}
+
         {errorMessage && (
           <p role="alert" className="px-4 py-3 bg-rose-50 text-rose-700 text-sm border-b border-rose-100">
             {errorMessage}
+          </p>
+        )}
+        {successMessage && (
+          <p role="status" className="px-4 py-3 bg-emerald-50 text-emerald-800 text-sm border-b border-emerald-100">
+            {successMessage}
           </p>
         )}
 
@@ -167,7 +247,7 @@ export default function ExamGradesClient({ exams, results }: Props) {
                   <th className="px-4 py-3 text-center">Benar</th>
                   <th className="px-4 py-3 text-center">Pelanggaran</th>
                   <th className="px-4 py-3">Waktu submit</th>
-                  <th className="px-4 py-3 text-right">Rincian</th>
+                  {canReviewAnswers && <th className="px-4 py-3 text-right">Rincian</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -193,17 +273,19 @@ export default function ExamGradesClient({ exams, results }: Props) {
                     <td className="px-4 py-3 text-xs text-slate-500">
                       {new Date(result.submittedAt).toLocaleString('id-ID')}
                     </td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        type="button"
-                        onClick={() => handleReview(result.id)}
-                        disabled={loadingReviewId === result.id}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-50"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        {loadingReviewId === result.id ? 'Memuat...' : 'Periksa jawaban'}
-                      </button>
-                    </td>
+                    {canReviewAnswers && (
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => handleReview(result.id)}
+                          disabled={loadingReviewId === result.id}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-50"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          {loadingReviewId === result.id ? 'Memuat...' : 'Periksa jawaban'}
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

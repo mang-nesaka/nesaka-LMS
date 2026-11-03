@@ -8,6 +8,8 @@
     "start": "next start",
     "test": "vitest run",
     "test:watch": "vitest",
+    "db:push": "prisma db push",
+    "db:backfill-classrooms": "node --experimental-strip-types scripts/backfill-classroom-relationships.mts",
     "hooks:install": "node scripts/install-hooks.mjs",
     "seed:demo": "node --experimental-strip-types scripts/seed-demo-data.mts",
     "watch:commit": "node scripts/auto-commit-push.mjs",

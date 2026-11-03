@@ -88,10 +88,18 @@ export async function createClassSchedule(formData: FormData) {
   });
   if (conflict) throw new Error('Jadwal bentrok dengan jadwal guru atau ruang yang sudah ada.');
 
-  await prisma.classTeachingSchedule.create({
-    data: { teacherId, classroomId, subject, dayOfWeek, startTime, endTime },
-  });
+  await prisma.$transaction([
+    prisma.classTeachingSchedule.create({
+      data: { teacherId, classroomId, subject, dayOfWeek, startTime, endTime },
+    }),
+    prisma.teacherClassroom.upsert({
+      where: { teacherId_classroomId: { teacherId, classroomId } },
+      update: {},
+      create: { teacherId, classroomId },
+    }),
+  ]);
   revalidatePath('/dashboard/classrooms/schedules');
+  revalidatePath('/dashboard/management/class-assignments');
   revalidatePath('/dashboard/teacher-agenda');
   return { success: true };
 }

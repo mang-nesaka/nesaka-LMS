@@ -29,7 +29,95 @@ export async function createTeacherAccount(formData: FormData) {
   });
 
   revalidatePath('/dashboard/management');
+  revalidatePath('/dashboard/management/class-assignments');
   return { success: true };
+}
+
+export async function assignStudentToClass(formData: FormData) {
+  await requireRole('ADMIN', 'TU');
+  const studentId = String(formData.get('studentId') ?? '');
+  const classroomId = String(formData.get('classroomId') ?? '');
+  const [student, classroom] = await Promise.all([
+    prisma.user.findUnique({ where: { id: studentId }, select: { role: true } }),
+    prisma.classroom.findUnique({ where: { id: classroomId }, select: { id: true, name: true } }),
+  ]);
+  if (student?.role !== 'STUDENT') throw new Error('Akun yang dipilih bukan siswa.');
+  if (!classroom) throw new Error('Kelas tidak ditemukan.');
+
+  await prisma.user.update({
+    where: { id: studentId },
+    data: { classroomId, studentClass: classroom.name },
+  });
+  revalidateClassAssignments();
+  return { success: true };
+}
+
+export async function assignTeacherToClass(formData: FormData) {
+  await requireRole('ADMIN', 'TU');
+  const teacherId = String(formData.get('teacherId') ?? '');
+  const classroomId = String(formData.get('classroomId') ?? '');
+  const [teacher, classroom] = await Promise.all([
+    prisma.user.findUnique({ where: { id: teacherId }, select: { role: true } }),
+    prisma.classroom.findUnique({ where: { id: classroomId }, select: { id: true } }),
+  ]);
+  if (teacher?.role !== 'TEACHER') throw new Error('Akun yang dipilih bukan guru.');
+  if (!classroom) throw new Error('Kelas tidak ditemukan.');
+
+  await prisma.teacherClassroom.upsert({
+    where: { teacherId_classroomId: { teacherId, classroomId } },
+    update: {},
+    create: { teacherId, classroomId },
+  });
+  revalidateClassAssignments();
+  return { success: true };
+}
+
+export async function removeTeacherFromClass(formData: FormData) {
+  await requireRole('ADMIN', 'TU');
+  const teacherId = String(formData.get('teacherId') ?? '');
+  const classroomId = String(formData.get('classroomId') ?? '');
+  const activeSchedule = await prisma.classTeachingSchedule.findFirst({
+    where: { teacherId, classroomId, isActive: true },
+    select: { id: true },
+  });
+  if (activeSchedule) throw new Error('Nonaktifkan jadwal mengajar kelas ini sebelum melepas guru.');
+  await prisma.teacherClassroom.deleteMany({ where: { teacherId, classroomId } });
+  revalidateClassAssignments();
+  return { success: true };
+}
+
+export async function assignHomeroomTeacherToClass(formData: FormData) {
+  await requireRole('ADMIN', 'TU');
+  const teacherId = String(formData.get('teacherId') ?? '');
+  const classroomId = String(formData.get('classroomId') ?? '');
+  const [teacher, classroom, existingHomeroom] = await Promise.all([
+    prisma.user.findUnique({ where: { id: teacherId }, select: { role: true } }),
+    prisma.classroom.findUnique({ where: { id: classroomId }, select: { name: true } }),
+    prisma.user.findFirst({
+      where: { role: 'WALI_KELAS', homeroomClassId: classroomId, id: { not: teacherId } },
+      select: { id: true },
+    }),
+  ]);
+  if (teacher?.role !== 'WALI_KELAS') throw new Error('Akun yang dipilih bukan wali kelas.');
+  if (!classroom) throw new Error('Kelas tidak ditemukan.');
+  if (existingHomeroom) throw new Error('Kelas ini sudah memiliki wali kelas.');
+
+  await prisma.user.update({
+    where: { id: teacherId },
+    data: { homeroomClassId: classroomId, waliKelasOf: classroom.name },
+  });
+  revalidateClassAssignments();
+  return { success: true };
+}
+
+function revalidateClassAssignments() {
+  revalidatePath('/dashboard/management');
+  revalidatePath('/dashboard/management/class-assignments');
+  revalidatePath('/dashboard/classrooms/schedules');
+  revalidatePath('/dashboard/management/class-assignments');
+  revalidatePath('/dashboard/teacher-agenda');
+  revalidatePath('/dashboard/exams/recap');
+  revalidatePath('/dashboard/walikelas');
 }
 
 export async function clearDemoAccounts() {
