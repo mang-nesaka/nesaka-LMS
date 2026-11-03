@@ -1,3 +1,5 @@
+export const instant = false;
+
 import { prisma } from '@/lib/prisma';
 import { getSessionUserId } from '@/lib/auth';
 import { redirect } from 'next/navigation';
