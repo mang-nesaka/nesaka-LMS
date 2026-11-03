@@ -53,6 +53,7 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
         { name: 'Kelola Kelas', href: '/dashboard/courses', icon: BookOpen },
         { name: 'Tugas & Penilaian', href: '/dashboard/assignments', icon: FileText },
         { name: 'Ujian CBT', href: '/dashboard/exams', icon: Laptop },
+        { name: 'Pengolahan Nilai CBT', href: '/dashboard/exams/recap', icon: BarChart3 },
         { name: 'Profil & Kartu Guru', href: '/dashboard/profile', icon: IdCard },
         { name: 'Pengaturan Akun', href: '/dashboard/settings', icon: Settings },
       ];

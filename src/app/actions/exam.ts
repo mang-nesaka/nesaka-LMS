@@ -243,3 +243,75 @@ export async function submitExamAction(
     violationsCount: result.violationsCount,
   };
 }
+
+export async function getExamResultReview(resultId: string) {
+  const currentUser = await requireRole('TEACHER', 'ADMIN', 'KEPSEK', 'WAKA_KURIKULUM');
+  const result = await prisma.examResult.findUnique({
+    where: { id: resultId },
+    include: {
+      student: {
+        select: { name: true, studentClass: true },
+      },
+      exam: {
+        include: {
+          course: { select: { title: true, teacherId: true } },
+          questions: {
+            orderBy: { questionNumber: 'asc' },
+            select: {
+              id: true,
+              questionNumber: true,
+              questionText: true,
+              imageUrl: true,
+              optionA: true,
+              optionB: true,
+              optionC: true,
+              optionD: true,
+              optionE: true,
+              correctAnswer: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!result) throw new Error('Hasil ujian tidak ditemukan.');
+  if (currentUser.role === 'TEACHER' && result.exam.course.teacherId !== currentUser.id) {
+    throw new Error('Anda tidak memiliki akses ke hasil ujian ini.');
+  }
+
+  const savedAnswers = result.answers && typeof result.answers === 'object' && !Array.isArray(result.answers)
+    ? result.answers as Record<string, unknown>
+    : {};
+
+  return {
+    studentName: result.student.name,
+    studentClass: result.student.studentClass,
+    examTitle: result.exam.title,
+    courseTitle: result.exam.course.title,
+    score: result.score,
+    totalCorrect: result.totalCorrect,
+    totalQuestions: result.totalQuestions,
+    questions: result.exam.questions.map((question) => {
+      const savedAnswer = savedAnswers[question.id];
+      const selectedAnswer = typeof savedAnswer === 'string' ? savedAnswer : null;
+      const options = [
+        ['A', question.optionA],
+        ['B', question.optionB],
+        ['C', question.optionC],
+        ['D', question.optionD],
+        ...(question.optionE ? [['E', question.optionE] as const] : []),
+      ];
+
+      return {
+        questionNumber: question.questionNumber,
+        questionText: question.questionText,
+        imageUrl: question.imageUrl,
+        selectedAnswer,
+        correctAnswer: question.correctAnswer,
+        isCorrect: selectedAnswer?.toUpperCase() === question.correctAnswer.toUpperCase(),
+        options,
+      };
+    }),
+  };
+}
