@@ -31,7 +31,7 @@ export default async function DashboardPage() {
   // TAMPILAN DASHBOARD SISWA
   // ==========================================
   if (currentUser.role === 'STUDENT') {
-    const [dapodikData, enrolledCourses, assignments, exams] = await prisma.$transaction([
+    const [dapodikData, enrolledCourses, assignments, exams, announcements] = await prisma.$transaction([
       prisma.dapodikForm.findUnique({ where: { studentId: currentUser.id } }),
       prisma.course.findMany({
         where: { enrollments: { some: { studentId: currentUser.id } } },
@@ -65,6 +65,11 @@ export default async function DashboardPage() {
         },
         orderBy: { createdAt: 'desc' },
         take: 4,
+      }),
+      prisma.announcement.findMany({
+        select: { id: true, title: true, body: true, publishedAt: true },
+        orderBy: { publishedAt: 'desc' },
+        take: 5,
       }),
     ]);
 
@@ -111,6 +116,25 @@ export default async function DashboardPage() {
               Lengkapi Formulir Sekarang →
             </Link>
           </div>
+        )}
+
+        {announcements.length > 0 && (
+          <section aria-labelledby="student-announcements" className="rounded-lg border border-emerald-200 bg-white">
+            <div className="border-b border-emerald-100 bg-emerald-50 px-4 py-3">
+              <h3 id="student-announcements" className="font-semibold text-emerald-950">Pengumuman Kesiswaan</h3>
+            </div>
+            <div className="divide-y divide-slate-100">
+              {announcements.map((announcement) => (
+                <article key={announcement.id} className="px-4 py-3">
+                  <h4 className="text-sm font-semibold text-slate-900">{announcement.title}</h4>
+                  <p className="mt-1 whitespace-pre-wrap text-sm text-slate-600">{announcement.body}</p>
+                  <time className="mt-2 block text-xs text-slate-400" dateTime={announcement.publishedAt.toISOString()}>
+                    {announcement.publishedAt.toLocaleString('id-ID')}
+                  </time>
+                </article>
+              ))}
+            </div>
+          </section>
         )}
 
         {/* Kartu Statistik Siswa */}

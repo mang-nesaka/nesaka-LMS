@@ -25,17 +25,6 @@ export default function ImportForm() {
     setLoading(false);
   }
 
-  const downloadTemplate = () => {
-    const csvContent = "data:text/csv;charset=utf-8,name,email,password,nama_kelas\nBudi Santoso,budi@sekolah.com,password123,Matematika Kelas X-A\nSiti Aminah,siti@sekolah.com,password123,Biologi Kelas X-B";
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "template_siswa_dengan_kelas.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   return (
     <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mb-8">
       <div className="flex justify-between items-center mb-4">
@@ -43,13 +32,13 @@ export default function ImportForm() {
           <Upload className="w-5 h-5 mr-2 text-indigo-600" />
           Import Data Siswa (CSV)
         </h3>
-        <button 
-          onClick={downloadTemplate}
+        <a
+          href="/api/students/template"
           className="text-sm flex items-center text-indigo-600 hover:text-indigo-800 font-medium"
         >
           <FileDown className="w-4 h-4 mr-1" />
           Download Template CSV
-        </button>
+        </a>
       </div>
 
       <form action={handleSubmit} className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">

@@ -17,7 +17,7 @@ function getLocalDateString(): string {
 }
 
 export async function getClassrooms() {
-  await requireRole('ADMIN', 'TU', 'TEACHER', 'WALI_KELAS', 'KEPSEK', 'WAKA_KURIKULUM', 'WAKA_SARPRAS');
+  await requireRole('ADMIN', 'TU', 'TEACHER', 'WALI_KELAS', 'KEPSEK', 'WAKA_KURIKULUM', 'WAKA_KESISWAAN', 'WAKA_SARPRAS');
   return await prisma.classroom.findMany({
     orderBy: { name: 'asc' },
   });

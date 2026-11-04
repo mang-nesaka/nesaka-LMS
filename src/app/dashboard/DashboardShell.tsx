@@ -8,7 +8,7 @@ import {
   LogOut, Menu, FileSpreadsheet, Laptop, GraduationCap, 
   IdCard, ChevronRight, FileUp, FileCheck, Camera, QrCode, 
   School, BarChart3, Radio, FileSignature, AlertCircle, MapPin, Clock,
-  PhoneOff, UserCheck
+  PhoneOff, UserCheck, Megaphone, Wrench, Handshake, ClipboardList
 } from 'lucide-react';
 import { useState } from 'react';
 import { logout } from '@/app/actions/auth';
@@ -39,6 +39,7 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
         { name: 'Kelas Pembelajaran', href: '/dashboard/courses', icon: BookOpen },
         { name: 'Tugas Saya', href: '/dashboard/assignments', icon: FileText },
         { name: 'Ujian CBT', href: '/dashboard/exams', icon: Laptop },
+        { name: 'Laporan Kerusakan Sarpras', href: '/dashboard/sarpras', icon: Wrench },
         { name: 'Profil & Kartu Siswa', href: '/dashboard/profile', icon: IdCard },
         { name: 'Upload Berkas (Kelas 10)', href: '/dashboard/documents', icon: FileUp },
         { name: 'Formulir Dapodik', href: '/dashboard/dapodik', icon: FileSpreadsheet },
@@ -93,6 +94,7 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
     if (user.role === 'WAKA_KURIKULUM') {
       return [
         { name: 'Dashboard Kurikulum', href: '/dashboard', icon: LayoutDashboard },
+        { name: 'Monitoring Kurikulum', href: '/dashboard/kurikulum', icon: ClipboardList },
         { name: 'Monitoring Guru Real-Time', href: '/dashboard/monitoring', icon: Radio },
         { name: 'Rekap Kehadiran Siswa', href: '/dashboard/walikelas', icon: BarChart3 },
         { name: 'Rekap Nilai Ujian CBT', href: '/dashboard/exams/recap', icon: Laptop },
@@ -106,6 +108,7 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
     if (user.role === 'WAKA_KESISWAAN') {
       return [
         { name: 'Dashboard Kesiswaan', href: '/dashboard', icon: LayoutDashboard },
+        { name: 'Ekstrakurikuler & Broadcast', href: '/dashboard/kesiswaan', icon: Megaphone },
         { name: 'Rekap Kehadiran Seluruh Siswa', href: '/dashboard/walikelas', icon: BarChart3 },
         { name: 'Berita Acara Kesiswaan', href: '/dashboard/berita-acara?role=WAKA_KESISWAAN', icon: FileSignature },
         { name: 'Profil Saya', href: '/dashboard/profile', icon: IdCard },
@@ -116,6 +119,7 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
     if (user.role === 'WAKA_SARPRAS') {
       return [
         { name: 'Dashboard Sarpras', href: '/dashboard', icon: LayoutDashboard },
+        { name: 'Laporan Kerusakan', href: '/dashboard/sarpras', icon: Wrench },
         { name: 'Barcode Ruang Kelas', href: '/dashboard/classrooms', icon: QrCode },
         { name: 'Berita Acara Sarpras', href: '/dashboard/berita-acara?role=WAKA_SARPRAS', icon: FileSignature },
         { name: 'Profil Saya', href: '/dashboard/profile', icon: IdCard },
@@ -126,6 +130,7 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
     if (user.role === 'WAKA_HUBDIN') {
       return [
         { name: 'Dashboard Hubdin', href: '/dashboard', icon: LayoutDashboard },
+        { name: 'Mitra & Program Industri', href: '/dashboard/hubdin', icon: Handshake },
         { name: 'Berita Acara Hubungan Industri', href: '/dashboard/berita-acara?role=WAKA_HUBDIN', icon: FileSignature },
         { name: 'Profil Saya', href: '/dashboard/profile', icon: IdCard },
         { name: 'Pengaturan Akun', href: '/dashboard/settings', icon: Settings },
@@ -155,6 +160,10 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
       { name: 'Tugas Harian', href: '/dashboard/assignments', icon: FileText },
       { name: 'Ujian CBT', href: '/dashboard/exams', icon: Laptop },
       { name: 'Rekap Nilai CBT', href: '/dashboard/exams/recap', icon: Laptop },
+      { name: 'Monitoring Kurikulum', href: '/dashboard/kurikulum', icon: ClipboardList },
+      { name: 'Ekstrakurikuler & Broadcast', href: '/dashboard/kesiswaan', icon: Megaphone },
+      { name: 'Laporan Sarpras', href: '/dashboard/sarpras', icon: Wrench },
+      { name: 'Mitra & Program Industri', href: '/dashboard/hubdin', icon: Handshake },
       { name: 'Berita Acara Kegiatan', href: '/dashboard/berita-acara', icon: FileSignature },
       { name: 'Barcode Ruang Kelas', href: '/dashboard/classrooms', icon: QrCode },
       { name: 'Jadwal Mengajar', href: '/dashboard/classrooms/schedules', icon: Clock },
