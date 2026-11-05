@@ -78,7 +78,7 @@ export default async function JoinPage({ params }: PageProps) {
       <div className="max-w-xl mx-auto w-full flex items-center justify-between pb-6">
         <Link href="/" className="flex items-center gap-2 font-bold text-lg text-slate-800">
           <School className="w-5 h-5 text-indigo-600" />
-          <span>LMS <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">EduSpace</span></span>
+          <span>LMS <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">Nesaka</span></span>
         </Link>
         {currentUser && (
           <span className="text-xs bg-slate-100 text-slate-700 px-3 py-1 rounded-full font-medium">
@@ -98,7 +98,7 @@ export default async function JoinPage({ params }: PageProps) {
             {course.title}
           </h1>
           <p className="text-indigo-100 text-xs sm:text-sm mt-1">
-            {course.description || "Kelas pembelajaran resmi di LMS EduSpace."}
+            {course.description || "Kelas pembelajaran resmi di LMS Nesaka."}
           </p>
         </div>
 
@@ -138,7 +138,7 @@ export default async function JoinPage({ params }: PageProps) {
 
       {/* Footer Bawah */}
       <div className="text-center text-xs text-slate-400 pt-6">
-        © 2026 LMS EduSpace. Platform Pembelajaran Daring Sekolah.
+        © 2026 LMS Nesaka. Platform Pembelajaran Daring Sekolah.
       </div>
     </div>
   );
