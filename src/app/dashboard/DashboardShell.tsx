@@ -287,7 +287,7 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
                 <GraduationCap className="w-6 h-6 text-indigo-600" />
                 <span>LMS</span>
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">
-                  EduSpace
+                  Nesaka
                 </span>
               </h1>
               <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mt-0.5">
@@ -376,7 +376,7 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
             </button>
             <div className="hidden sm:block">
               <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
-                Portal LMS
+                Portal Nesaka
               </span>
               <span className="text-sm font-bold text-slate-800">
                 {roleDetails.portalTitle}
