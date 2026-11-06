@@ -1,28 +1,123 @@
 "use client";
 
 import { useState } from 'react';
-import { importStudentsCSV } from '@/app/actions/import';
+import { useRouter } from 'next/navigation';
+import { importStudentsCSVBatch, type StudentImportRow, type StudentImportResult } from '@/app/actions/import';
 import { Upload, FileDown, AlertCircle, CheckCircle2 } from 'lucide-react';
 
+const BATCH_SIZE = 25;
+
+function parseCsv(text: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let field = '';
+  let quoted = false;
+
+  for (let index = 0; index < text.length; index++) {
+    const character = text[index];
+    if (quoted) {
+      if (character === '"' && text[index + 1] === '"') {
+        field += '"';
+        index++;
+      } else if (character === '"') {
+        quoted = false;
+      } else {
+        field += character;
+      }
+    } else if (character === '"' && field.length === 0) {
+      quoted = true;
+    } else if (character === ',') {
+      row.push(field);
+      field = '';
+    } else if (character === '\n') {
+      row.push(field.replace(/\r$/, ''));
+      if (row.some((cell) => cell.trim())) rows.push(row);
+      row = [];
+      field = '';
+    } else {
+      field += character;
+    }
+  }
+
+  if (quoted) throw new Error('Format CSV tidak valid: ada tanda kutip yang belum ditutup.');
+  if (field.length || row.length) {
+    row.push(field.replace(/\r$/, ''));
+    if (row.some((cell) => cell.trim())) rows.push(row);
+  }
+  return rows;
+}
+
 export default function ImportForm() {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: 'error'|'success', text: string } | null>(null);
 
   async function handleSubmit(formData: FormData) {
     setLoading(true);
+    setProgress(null);
     setMessage(null);
-    
+    let completedBatches = 0;
+    let totalBatches = 0;
+    const result: StudentImportResult = { createdCount: 0, updatedCount: 0, skippedCount: 0 };
+
     try {
-      await importStudentsCSV(formData);
-      setMessage({ type: 'success', text: 'Data siswa berhasil diimpor!' });
-      // Reset form
+      const file = formData.get('file');
+      if (!(file instanceof File) || !file.name) throw new Error('Pilih file CSV terlebih dahulu.');
+      if (file.size > 5 * 1024 * 1024) throw new Error('Ukuran CSV maksimal 5MB.');
+
+      const parsedRows = parseCsv(await file.text());
+      if (!parsedRows.length) throw new Error('File CSV kosong.');
+      const headers = parsedRows[0].map((header) => header.replace(/^\uFEFF/, '').trim().toLowerCase());
+      const nameIndex = headers.indexOf('name');
+      const emailIndex = headers.indexOf('email');
+      const passwordIndex = headers.indexOf('password');
+      const classroomIndex = headers.indexOf('nama_kelas');
+      if (nameIndex < 0 || emailIndex < 0 || passwordIndex < 0) {
+        throw new Error('Header CSV harus memuat kolom name, email, dan password.');
+      }
+
+      const rows: StudentImportRow[] = parsedRows.slice(1).map((cells) => ({
+        name: cells[nameIndex] ?? '',
+        email: cells[emailIndex] ?? '',
+        password: cells[passwordIndex] ?? '',
+        classroomName: classroomIndex >= 0 ? cells[classroomIndex] ?? '' : '',
+      }));
+      if (!rows.length) throw new Error('Tidak ada baris data siswa setelah header.');
+
+      totalBatches = Math.ceil(rows.length / BATCH_SIZE);
+      for (let start = 0; start < rows.length; start += BATCH_SIZE) {
+        const batchResult = await importStudentsCSVBatch(
+          rows.slice(start, start + BATCH_SIZE),
+          start + BATCH_SIZE >= rows.length,
+        );
+        result.createdCount += batchResult.createdCount;
+        result.updatedCount += batchResult.updatedCount;
+        result.skippedCount += batchResult.skippedCount;
+        completedBatches++;
+        setProgress(`Memproses bagian ${completedBatches} dari ${totalBatches}...`);
+      }
+
+      setMessage({
+        type: 'success',
+        text: `Impor selesai: ${result.createdCount} siswa baru, ${result.updatedCount} akun diperbarui, ${result.skippedCount} baris dilewati.`,
+      });
       const fileInput = document.getElementById('file-upload') as HTMLInputElement;
       if (fileInput) fileInput.value = '';
+      router.refresh();
     } catch (err) {
-      setMessage({ type: 'error', text: err instanceof Error ? err.message : 'Terjadi kesalahan saat impor.' });
+      const detail = err instanceof Error ? err.message : 'Terjadi kesalahan saat impor.';
+      const partialResult = result.createdCount + result.updatedCount + result.skippedCount;
+      setMessage({
+        type: 'error',
+        text: completedBatches
+          ? `Impor terhenti setelah ${completedBatches} dari ${totalBatches} bagian. ${partialResult} baris sudah diproses; unggah ulang file untuk melanjutkan. Detail: ${detail}`
+          : detail,
+      });
+    } finally {
+      setLoading(false);
+      setProgress(null);
     }
-    
-    setLoading(false);
   }
 
   return (
@@ -59,6 +154,7 @@ export default function ImportForm() {
         </button>
       </form>
 
+      {progress && <p role="status" className="mt-3 text-sm text-slate-500">{progress}</p>}
       {message && (
         <div className={`mt-4 p-4 rounded-xl flex items-center text-sm ${message.type === 'error' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
           {message.type === 'error' ? <AlertCircle className="w-5 h-5 mr-2" /> : <CheckCircle2 className="w-5 h-5 mr-2" />}

@@ -5,90 +5,123 @@ import { revalidatePath } from 'next/cache';
 import { requireRole } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 
+export interface StudentImportRow {
+  name: string;
+  email: string;
+  password: string;
+  classroomName: string;
+}
 
-export async function importStudentsCSV(formData: FormData) {
+export interface StudentImportResult {
+  createdCount: number;
+  updatedCount: number;
+  skippedCount: number;
+}
+
+export async function importStudentsCSVBatch(rows: StudentImportRow[], isFinalBatch: boolean): Promise<StudentImportResult> {
   await requireRole('TU', 'ADMIN');
 
-  const file = formData.get('file') as File;
-  if (!file || file.name === 'undefined') {
-    throw new Error('File tidak ditemukan.');
+  if (!Array.isArray(rows) || rows.length === 0 || rows.length > 25) {
+    throw new Error('Data impor harus berisi 1 sampai 25 baris per proses.');
   }
-  if (file.size > 5 * 1024 * 1024) throw new Error('Ukuran CSV maksimal 5MB.');
 
-  const text = await file.text();
-  const rows = text.split('\n').map(row => row.trim()).filter(row => row.length > 0);
-  
-  // Asumsi CSV header: name, email, password, nama_kelas
-  let successCount = 0;
-
-  for (let i = 1; i < rows.length; i++) {
-    const columns = rows[i].split(',');
-    if (columns.length >= 3) {
-      const name = columns[0].trim();
-      const email = columns[1].trim();
-      const password = columns[2].trim();
-      const courseTitle = columns.length >= 4 ? columns[3].trim() : null;
-
-      if (name && email && password) {
-        const existingUser = await prisma.user.findUnique({ where: { email }, select: { id: true, role: true } });
-        if (existingUser && existingUser.role !== 'STUDENT') continue;
-        const passwordHash = await bcrypt.hash(password, 12);
-        const [classroom, course] = courseTitle
-          ? await Promise.all([
-            prisma.classroom.findUnique({ where: { name: courseTitle }, select: { id: true, name: true } }),
-            prisma.course.findFirst({ where: { title: courseTitle }, select: { id: true } }),
-          ])
-          : [null, null];
-
-        // 1. Buat atau update User (Siswa)
-        const user = await prisma.user.upsert({
-          where: { email },
-          update: {
-            name,
-            password: passwordHash,
-            ...(classroom ? { classroomId: classroom.id, studentClass: classroom.name } : {}),
-          },
-          create: {
-            name,
-            email,
-            password: passwordHash,
-            role: 'STUDENT',
-            ...(classroom ? { classroomId: classroom.id, studentClass: classroom.name } : {}),
-          },
-        });
-
-        // 2. Jika ada nama_kelas di CSV, masukkan siswa ke kelas tersebut
-        if (course) {
-            // Mendaftarkan siswa ke kelas tersebut (Enrollment)
-            // Cek apakah sudah terdaftar
-            const existingEnrollment = await prisma.enrollment.findUnique({
-              where: {
-                studentId_courseId: {
-                  studentId: user.id,
-                  courseId: course.id,
-                }
-              }
-            });
-
-            if (!existingEnrollment) {
-              await prisma.enrollment.create({
-                data: {
-                  studentId: user.id,
-                  courseId: course.id,
-                }
-              });
-            }
-        }
-        successCount++;
-      }
+  const uniqueRows = new Map<string, StudentImportRow>();
+  let skippedCount = 0;
+  for (const row of rows) {
+    const name = typeof row?.name === 'string' ? row.name.trim() : '';
+    const email = typeof row?.email === 'string' ? row.email.trim() : '';
+    const password = typeof row?.password === 'string' ? row.password.trim() : '';
+    const classroomName = typeof row?.classroomName === 'string' ? row.classroomName.trim() : '';
+    if (!name || !email || !password) {
+      skippedCount++;
+      continue;
     }
+    if (uniqueRows.has(email)) {
+      skippedCount++;
+      continue;
+    }
+    uniqueRows.set(email, { name, email, password, classroomName });
   }
 
-  if (successCount === 0) {
-    throw new Error('Tidak ada data valid yang ditemukan di file CSV.');
+  const validRows = [...uniqueRows.values()];
+  if (!validRows.length) return { createdCount: 0, updatedCount: 0, skippedCount };
+
+  const existingUsers = await prisma.user.findMany({
+    where: { email: { in: validRows.map((row) => row.email) } },
+    select: { email: true, role: true },
+  });
+  const existingByEmail = new Map(existingUsers.map((user) => [user.email, user]));
+  const importableRows = validRows.filter((row) => {
+    const existing = existingByEmail.get(row.email);
+    if (existing && existing.role !== 'STUDENT') {
+      skippedCount++;
+      return false;
+    }
+    return true;
+  });
+
+  const classroomNames = [...new Set(importableRows.map((row) => row.classroomName).filter(Boolean))];
+  const [classrooms, courses, hashedRows] = await Promise.all([
+    classroomNames.length
+      ? prisma.classroom.findMany({
+        where: { name: { in: classroomNames } },
+        select: { id: true, name: true },
+      })
+      : Promise.resolve([]),
+    classroomNames.length
+      ? prisma.course.findMany({
+        where: { title: { in: classroomNames } },
+        select: { id: true, title: true },
+      })
+      : Promise.resolve([]),
+    Promise.all(importableRows.map(async (row) => ({
+      ...row,
+      passwordHash: await bcrypt.hash(row.password, 12),
+    }))),
+  ]);
+  const classroomByName = new Map(classrooms.map((classroom) => [classroom.name, classroom]));
+  const courseByTitle = new Map(courses.map((course) => [course.title, course]));
+
+  const importedUsers = await Promise.all(hashedRows.map(async (row) => {
+    const classroom = classroomByName.get(row.classroomName);
+    const user = await prisma.user.upsert({
+      where: { email: row.email },
+      update: {
+        name: row.name,
+        password: row.passwordHash,
+        ...(classroom ? { classroomId: classroom.id, studentClass: classroom.name } : {}),
+      },
+      create: {
+        name: row.name,
+        email: row.email,
+        password: row.passwordHash,
+        role: 'STUDENT',
+        ...(classroom ? { classroomId: classroom.id, studentClass: classroom.name } : {}),
+      },
+      select: { id: true },
+    });
+    const course = courseByTitle.get(row.classroomName);
+    return course ? { studentId: user.id, courseId: course.id } : null;
+  }));
+
+  const enrollments = importedUsers.filter((enrollment): enrollment is NonNullable<typeof enrollment> => enrollment !== null);
+  for (let start = 0; start < enrollments.length; start += 500) {
+    await prisma.enrollment.createMany({
+      data: enrollments.slice(start, start + 500),
+      skipDuplicates: true,
+    });
   }
 
-  revalidatePath('/dashboard/students');
-  revalidatePath('/dashboard/management/class-assignments');
-  revalidatePath('/dashboard/assignments');
+  if (isFinalBatch) {
+    revalidatePath('/dashboard/students');
+    revalidatePath('/dashboard/management');
+    revalidatePath('/dashboard/management/class-assignments');
+    revalidatePath('/dashboard/assignments');
+  }
+
+  return {
+    createdCount: importableRows.filter((row) => !existingByEmail.has(row.email)).length,
+    updatedCount: importableRows.filter((row) => existingByEmail.has(row.email)).length,
+    skippedCount,
+  };
 }
