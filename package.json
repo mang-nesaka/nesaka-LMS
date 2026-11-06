@@ -11,6 +11,7 @@
     "db:push": "prisma db push",
     "db:studio": "prisma studio --schema=./prisma/schema.prisma --port 5558",
     "db:backfill-classrooms": "node --experimental-strip-types scripts/backfill-classroom-relationships.mts",
+    "db:migrate-rpl-classes": "node --experimental-strip-types scripts/migrate-rpl-classes.mts",
     "hooks:install": "node scripts/install-hooks.mjs",
     "seed:demo": "node --experimental-strip-types scripts/seed-demo-data.mts",
     "watch:commit": "node scripts/auto-commit-push.mjs",

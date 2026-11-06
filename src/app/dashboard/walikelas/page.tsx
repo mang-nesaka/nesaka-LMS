@@ -36,7 +36,7 @@ export default async function WaliKelasPage({ searchParams }: { searchParams: Pr
   // Jika wali kelas, utamakan kelas yang diwalikannya
   const selectedClass = currentUser.role === 'WALI_KELAS'
     ? currentUser.homeroomClass?.name ?? ''
-    : params.class || currentUser.waliKelasOf || (classrooms[0]?.name ?? 'X RPL 1');
+    : params.class || currentUser.waliKelasOf || (classrooms[0]?.name ?? 'X TEKNIK KIMIA INDUSTRI');
   const selectedClassroomId = classrooms.find((classroom) => classroom.name === selectedClass)?.id;
   const selectedPeriod = (params.period as 'daily' | 'weekly' | 'monthly' | 'semester') || 'daily';
 

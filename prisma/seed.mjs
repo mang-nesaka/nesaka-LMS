@@ -29,11 +29,10 @@ async function main() {
 
   // 2. Classrooms
   const classes = [
-    { name: 'X RPL 1', code: 'NESAKA-X-RPL-1', level: '10' },
-    { name: 'X RPL 2', code: 'NESAKA-X-RPL-2', level: '10' },
+    { name: 'X TEKNIK KIMIA INDUSTRI', code: 'NESAKA-X-TKI', level: '10' },
     { name: 'X TKJ 1', code: 'NESAKA-X-TKJ-1', level: '10' },
-    { name: 'XI RPL 1', code: 'NESAKA-XI-RPL-1', level: '11' },
-    { name: 'XII RPL 1', code: 'NESAKA-XII-RPL-1', level: '12' },
+    { name: 'XI TEKNIK KIMIA INDUSTRI', code: 'NESAKA-XI-TKI', level: '11' },
+    { name: 'XII TEKNIK KIMIA INDUSTRI', code: 'NESAKA-XII-TKI', level: '12' },
   ];
 
   for (const c of classes) {
@@ -69,7 +68,7 @@ async function main() {
       email: 'walikelas@sekolah.com',
       password: 'password123',
       role: 'WALI_KELAS',
-      waliKelasOf: 'X RPL 1',
+      waliKelasOf: 'X TEKNIK KIMIA INDUSTRI',
     },
     {
       name: 'Budi Guru Pengajar, M.Kom',
@@ -106,7 +105,7 @@ async function main() {
       email: 'siswa@sekolah.com',
       password: 'password123',
       role: 'STUDENT',
-      studentClass: 'X RPL 1',
+      studentClass: 'X TEKNIK KIMIA INDUSTRI',
       nipOrNis: '20241001',
     },
   ];
