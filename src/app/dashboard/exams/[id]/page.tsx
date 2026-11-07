@@ -57,6 +57,7 @@ export default async function ExamDetailPage({ params }: PageProps) {
   }
 
   if (user.role === 'STUDENT') {
+    if (!exam.isPublished) redirect('/dashboard/exams');
     const enrollment = await prisma.enrollment.findUnique({
       where: { studentId_courseId: { studentId: user.id, courseId: exam.courseId } },
       select: { id: true },
@@ -64,7 +65,7 @@ export default async function ExamDetailPage({ params }: PageProps) {
     if (!enrollment) redirect('/dashboard/exams');
   } else if (user.role === 'TEACHER') {
     if (exam.course.teacherId !== user.id) redirect('/dashboard/exams');
-  } else if (user.role !== 'ADMIN') {
+  } else if (!['ADMIN', 'TU', 'WAKA_KURIKULUM'].includes(user.role)) {
     redirect('/dashboard');
   }
 

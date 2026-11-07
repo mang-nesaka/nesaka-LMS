@@ -3,7 +3,7 @@ export const instant = false;
 import { prisma } from '@/lib/prisma';
 import { getSessionUserId } from '@/lib/auth';
 import Link from 'next/link';
-import { deleteExam } from '@/app/actions/exam';
+import { deleteExam, publishExam } from '@/app/actions/exam';
 import CreateExamModal from './CreateExamModal';
 import { 
   Laptop, Clock, FileQuestion, Users, AlertTriangle, 
@@ -16,6 +16,8 @@ export default async function ExamsPage() {
 
   const currentUser = userId ? await prisma.user.findUnique({ where: { id: userId } }) : null;
   const isTeacherOrAdmin = currentUser?.role === 'TEACHER' || currentUser?.role === 'ADMIN';
+  const canManagePublication = ['ADMIN', 'TU', 'WAKA_KURIKULUM'].includes(currentUser?.role ?? '');
+  const canSubmitQuestions = currentUser?.role === 'TEACHER';
   const isStudent = currentUser?.role === 'STUDENT';
 
   // Guru/Admin Courses
@@ -29,13 +31,13 @@ export default async function ExamsPage() {
   }
 
   // Jika Guru/Admin: Ambil seluruh ujian yang diajar beserta hasil submission siswa
-  const teacherExams = isTeacherOrAdmin && userId
+  const teacherExams = (isTeacherOrAdmin || canManagePublication) && userId
     ? await prisma.exam.findMany({
-      where: currentUser?.role === 'ADMIN' ? {} : {
+      where: currentUser?.role === 'TEACHER' ? {
         course: { teacherId: userId }
-      },
+      } : {},
       include: {
-        course: { select: { title: true } },
+        course: { select: { title: true, teacher: { select: { name: true } } } },
         questions: { select: { id: true } },
         results: {
           include: {
@@ -48,10 +50,51 @@ export default async function ExamsPage() {
     })
     : [];
 
+  const teacherSubmissionStatuses = canManagePublication
+    ? await prisma.user.findMany({
+      where: { role: 'TEACHER' },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        coursesAsTeacher: {
+          select: {
+            id: true,
+            title: true,
+            exams: {
+              select: { id: true, title: true, isPublished: true },
+              orderBy: { createdAt: 'desc' },
+              take: 1,
+            },
+          },
+        },
+      },
+      orderBy: { name: 'asc' },
+    })
+    : [];
+  const submissionRows = teacherSubmissionStatuses.flatMap((teacher) =>
+    teacher.coursesAsTeacher.length > 0
+      ? teacher.coursesAsTeacher.map((course) => ({
+        id: course.id,
+        teacherName: teacher.name,
+        teacherEmail: teacher.email,
+        courseTitle: course.title,
+        exams: course.exams,
+      }))
+      : [{
+        id: teacher.id,
+        teacherName: teacher.name,
+        teacherEmail: teacher.email,
+        courseTitle: 'Belum ada mata pelajaran',
+        exams: [],
+      }],
+  );
+
   // Jika Siswa: Ambil ujian dari kelas yang diikutinya
   const studentExams = isStudent && userId
     ? await prisma.exam.findMany({
       where: {
+        isPublished: true,
         course: {
           enrollments: {
             some: { studentId: userId },
@@ -79,18 +122,20 @@ export default async function ExamsPage() {
               <Laptop className="w-6 h-6" />
             </span>
             <h2 className="text-2xl font-bold text-slate-800">
-              {isTeacherOrAdmin ? 'Ujian CBT (Computer Based Test)' : 'Ujian CBT Saya'}
+              {canManagePublication ? 'Publikasi Ujian CBT' : isTeacherOrAdmin ? 'Ujian CBT (Computer Based Test)' : 'Ujian CBT Saya'}
             </h2>
           </div>
           <p className="text-slate-500 mt-1">
-            {isTeacherOrAdmin 
+            {canManagePublication
+              ? 'Pantau pengumpulan soal guru dan publikasikan ujian CBT yang siap.'
+              : isTeacherOrAdmin
               ? 'Kelola ujian daring berbasis komputer, unggah soal via Excel, dan pantau kejujuran siswa.'
               : 'Daftar ujian CBT daring terjadwal untuk kelas yang Anda ikuti.'}
           </p>
         </div>
 
         {/* Modal Buat Ujian hanya untuk Guru/Admin */}
-        {isTeacherOrAdmin && (
+        {canSubmitQuestions && (
           <CreateExamModal courses={myCourses} />
         )}
       </div>
@@ -214,7 +259,57 @@ export default async function ExamsPage() {
       )}
 
       {/* TAMPILAN GURU / ADMIN */}
-      {isTeacherOrAdmin && (
+      {canManagePublication && (
+        <section className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-bold text-slate-800">Status Pengumpulan Soal Guru</h3>
+            <span className="text-sm text-slate-500">
+              {submissionRows.filter((item) => item.exams.length > 0).length} / {submissionRows.length} mata pelajaran terkumpul
+            </span>
+          </div>
+          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 text-xs text-slate-500">
+                <tr>
+                  <th className="px-4 py-3 font-semibold">Guru</th>
+                  <th className="px-4 py-3 font-semibold">Mata Pelajaran / Kelas</th>
+                  <th className="px-4 py-3 font-semibold">Status Soal</th>
+                  <th className="px-4 py-3 font-semibold">Status CBT</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {submissionRows.map((item) => {
+                  const submittedExam = item.exams[0];
+                  return (
+                    <tr key={item.id}>
+                      <td className="px-4 py-3 font-medium text-slate-800">
+                        {item.teacherName}
+                        <span className="block text-xs font-normal text-slate-500">{item.teacherEmail}</span>
+                      </td>
+                      <td className="px-4 py-3 text-slate-700">{item.courseTitle}</td>
+                      <td className="px-4 py-3">
+                        {submittedExam ? (
+                          <span className="inline-flex items-center gap-1 text-emerald-700"><CheckCircle2 className="h-4 w-4" />Sudah mengumpulkan</span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-amber-700"><AlertTriangle className="h-4 w-4" />Belum mengumpulkan</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-slate-600">
+                        {submittedExam ? (submittedExam.isPublished ? 'Sudah dipublikasikan' : 'Menunggu publikasi') : '-'}
+                      </td>
+                    </tr>
+                  );
+                })}
+                {submissionRows.length === 0 && (
+                  <tr><td colSpan={4} className="px-4 py-8 text-center text-slate-500">Belum ada guru atau mata pelajaran terdaftar.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {(isTeacherOrAdmin || canManagePublication) && (
         <div className="space-y-6">
           {teacherExams.length === 0 ? (
             <div className="bg-white rounded-3xl p-12 text-center border border-slate-100 shadow-sm max-w-xl mx-auto">
@@ -223,9 +318,11 @@ export default async function ExamsPage() {
               </div>
               <h3 className="text-xl font-bold text-slate-800">Belum Ada Ujian CBT</h3>
               <p className="text-sm text-slate-500 mt-2">
-                Buat ujian CBT pertama Anda dengan mengunduh template Excel, mengisi butir soal (bisa rumus matematika KaTeX, bahasa Arab, dan link gambar), lalu unggah file tersebut.
+                {canSubmitQuestions
+                  ? 'Belum ada soal yang dikumpulkan. Unduh template Excel, isi butir soal, lalu unggah untuk diteruskan ke petugas publikasi.'
+                  : 'Belum ada soal CBT yang dikumpulkan guru.'}
               </p>
-              <div className="mt-6 flex flex-wrap justify-center gap-3">
+              {canSubmitQuestions && <div className="mt-6 flex flex-wrap justify-center gap-3">
                 <a
                   href="/api/exams/template"
                   download
@@ -233,7 +330,7 @@ export default async function ExamsPage() {
                 >
                   Unduh Template Excel
                 </a>
-              </div>
+              </div>}
             </div>
           ) : (
             <div className="space-y-6">
@@ -251,6 +348,9 @@ export default async function ExamsPage() {
                           <span className="px-3 py-0.5 bg-indigo-50 text-indigo-700 rounded-full text-xs font-semibold">
                             {exam.course.title}
                           </span>
+                          {canManagePublication && <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${exam.isPublished ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                            {exam.isPublished ? 'Dipublikasikan' : 'Menunggu publikasi'}
+                          </span>}
                           <span className="text-xs text-slate-400">
                             Dibuat:{' '}
                             {new Date(exam.createdAt).toLocaleDateString('id-ID', {
@@ -261,12 +361,19 @@ export default async function ExamsPage() {
                           </span>
                         </div>
                         <h3 className="text-xl font-bold text-slate-900">{exam.title}</h3>
+                        {canManagePublication && <p className="text-xs text-slate-500 mt-1">Guru: {exam.course.teacher.name}</p>}
                         {exam.description && (
                           <p className="text-sm text-slate-500 mt-0.5">{exam.description}</p>
                         )}
                       </div>
 
                       <div className="flex items-center gap-2">
+                        {canManagePublication && !exam.isPublished && <form action={publishExam}>
+                          <input type="hidden" name="id" value={exam.id} />
+                          <button type="submit" className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl transition-colors">
+                            Publikasikan
+                          </button>
+                        </form>}
                         <Link
                           href={`/dashboard/exams/${exam.id}`}
                           className="flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors"
@@ -274,16 +381,18 @@ export default async function ExamsPage() {
                           <ExternalLink className="w-3.5 h-3.5" />
                           Pratinjau CBT
                         </Link>
-                        <form action={deleteExam}>
-                          <input type="hidden" name="id" value={exam.id} />
-                          <button
-                            type="submit"
-                            className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors"
-                            title="Hapus Ujian CBT"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </form>
+                        {(currentUser?.role === 'ADMIN' || (currentUser?.role === 'TEACHER' && !exam.isPublished)) && (
+                          <form action={deleteExam}>
+                            <input type="hidden" name="id" value={exam.id} />
+                            <button
+                              type="submit"
+                              className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors"
+                              title="Hapus Ujian CBT"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </form>
+                        )}
                       </div>
                     </div>
 

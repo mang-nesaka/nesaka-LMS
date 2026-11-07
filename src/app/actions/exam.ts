@@ -127,6 +127,7 @@ export async function createExamFromExcel(formData: FormData) {
       title,
       description: description || `Ujian CBT ${questionsToCreate.length} butir soal`,
       durationMinutes,
+      isPublished: false,
       questions: {
         create: questionsToCreate,
       },
@@ -137,6 +138,28 @@ export async function createExamFromExcel(formData: FormData) {
   return { success: true, examId: exam.id, count: questionsToCreate.length };
 }
 
+export async function publishExam(formData: FormData) {
+  await requireRole('ADMIN', 'TU', 'WAKA_KURIKULUM');
+
+  const examId = formData.get('id');
+  if (typeof examId !== 'string' || !examId) throw new Error('ID ujian tidak valid.');
+
+  const exam = await prisma.exam.findUnique({
+    where: { id: examId },
+    select: { id: true, isPublished: true },
+  });
+  if (!exam) throw new Error('Ujian tidak ditemukan.');
+  if (exam.isPublished) throw new Error('Ujian ini sudah dipublikasikan.');
+
+  await prisma.exam.update({
+    where: { id: examId },
+    data: { isPublished: true },
+  });
+
+  revalidatePath('/dashboard/exams');
+  revalidatePath('/dashboard');
+}
+
 export async function deleteExam(formData: FormData) {
   const currentUser = await requireRole('TEACHER', 'ADMIN');
   const examId = formData.get('id') as string;
@@ -144,11 +167,14 @@ export async function deleteExam(formData: FormData) {
 
   const exam = await prisma.exam.findUnique({
     where: { id: examId },
-    select: { course: { select: { teacherId: true } } },
+    select: { isPublished: true, course: { select: { teacherId: true } } },
   });
   if (!exam) throw new Error('Ujian tidak ditemukan.');
   if (currentUser.role !== 'ADMIN' && exam.course.teacherId !== currentUser.id) {
     throw new Error('Anda hanya dapat menghapus ujian di kelas yang Anda kelola.');
+  }
+  if (currentUser.role === 'TEACHER' && exam.isPublished) {
+    throw new Error('Ujian yang sudah dipublikasikan tidak dapat dihapus oleh guru.');
   }
 
   await prisma.exam.delete({
@@ -181,6 +207,7 @@ export async function submitExamAction(
   const exam = await prisma.exam.findUnique({
     where: { id: examId },
     select: {
+      isPublished: true,
       course: {
         select: {
           enrollments: {
@@ -192,7 +219,10 @@ export async function submitExamAction(
       },
     },
   });
-  if (!exam?.course.enrollments.length) {
+  if (!exam?.isPublished) {
+    throw new Error('Ujian ini belum dipublikasikan.');
+  }
+  if (!exam.course.enrollments.length) {
     throw new Error('Anda tidak terdaftar pada kelas ujian ini.');
   }
 

@@ -202,6 +202,7 @@ model Exam {
   title           String
   description     String?
   durationMinutes Int          @default(60)
+  isPublished     Boolean      @default(true)
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 
