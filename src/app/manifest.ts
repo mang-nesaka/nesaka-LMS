@@ -22,9 +22,9 @@ export default function manifest(): MetadataRoute.Manifest {
         type: 'image/png',
       },
       {
-        src: '/nesaka-app-icon.svg',
-        sizes: 'any',
-        type: 'image/svg+xml',
+        src: '/nesaka-app-icon-maskable.png',
+        sizes: '512x512',
+        type: 'image/png',
         purpose: 'maskable',
       },
     ],

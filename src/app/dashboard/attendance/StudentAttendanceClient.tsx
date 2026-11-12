@@ -36,6 +36,7 @@ export default function StudentAttendanceClient({ student, attendance, setting, 
   const router = useRouter();
   const [photo, setPhoto] = useState<string | null>(null);
   const [isCameraActive, setIsCameraActive] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [distance, setDistance] = useState<number | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
@@ -87,30 +88,58 @@ export default function StudentAttendanceClient({ student, attendance, setting, 
 
   // Start Camera
   const startCamera = async () => {
+    setCameraError(null);
+    if (!window.isSecureContext) {
+      setCameraError('Kamera hanya dapat dibuka melalui HTTPS atau localhost.');
+      return;
+    }
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraError('Browser ini tidak menyediakan akses kamera. Coba browser terbaru.');
+      return;
+    }
+
+    let stream: MediaStream | null = null;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
+      stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
         audio: false,
       });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
-        setIsCameraActive(true);
-      }
+      const video = videoRef.current;
+      if (!video) throw new Error('Elemen video belum siap. Muat ulang halaman lalu coba lagi.');
+      video.srcObject = stream;
+      await video.play();
+      setIsCameraActive(true);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'izin kamera belum diberikan';
-      alert(`Gagal mengakses kamera: ${message}. Pastikan izin kamera telah diberikan.`);
+      stream?.getTracks().forEach((track) => track.stop());
+      const errorName = err instanceof Error ? err.name : '';
+      const message = errorName === 'NotAllowedError' || errorName === 'PermissionDeniedError'
+        ? 'Izin kamera ditolak. Izinkan kamera untuk situs ini di pengaturan browser.'
+        : errorName === 'NotFoundError'
+          ? 'Kamera tidak ditemukan pada perangkat ini.'
+          : errorName === 'NotReadableError'
+            ? 'Kamera sedang digunakan aplikasi lain. Tutup aplikasi tersebut lalu coba lagi.'
+            : err instanceof Error ? err.message : 'Kamera gagal dibuka.';
+      setCameraError(message);
+      setIsCameraActive(false);
     }
   };
 
   // Stop Camera
   const stopCamera = () => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach((track) => track.stop());
-      setIsCameraActive(false);
+    const video = videoRef.current;
+    if (video?.srcObject instanceof MediaStream) {
+      video.srcObject.getTracks().forEach((track) => track.stop());
+      video.srcObject = null;
     }
+    setIsCameraActive(false);
   };
+
+  useEffect(() => () => {
+    const stream = videoRef.current?.srcObject;
+    if (stream instanceof MediaStream) {
+      stream.getTracks().forEach((track) => track.stop());
+    }
+  }, []);
 
   // Take Snapshot
   const capturePhoto = () => {
@@ -199,11 +228,15 @@ export default function StudentAttendanceClient({ student, attendance, setting, 
           </p>
 
           <div className="relative aspect-video bg-slate-900 rounded-2xl overflow-hidden border border-slate-200 flex items-center justify-center">
-            {photo ? (
-              <img src={photo} alt="Selfie Kehadiran" className="w-full h-full object-cover" />
-            ) : isCameraActive ? (
-              <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
-            ) : (
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className={`absolute inset-0 h-full w-full object-cover ${isCameraActive && !photo ? '' : 'hidden'}`}
+            />
+            {photo ? <img src={photo} alt="Selfie Kehadiran" className="absolute inset-0 h-full w-full object-cover" /> : null}
+            {!photo && !isCameraActive && (
               <div className="text-center p-6 text-slate-400">
                 <Camera className="w-12 h-12 mx-auto mb-2 opacity-50" />
                 <p className="text-xs">Kamera belum diaktifkan</p>
@@ -249,6 +282,7 @@ export default function StudentAttendanceClient({ student, attendance, setting, 
               </button>
             )}
           </div>
+          {cameraError && <p role="alert" className="mt-3 text-sm text-rose-700">{cameraError}</p>}
         </div>
 
         {/* Status Lokasi GPS */}

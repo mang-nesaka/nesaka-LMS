@@ -10,12 +10,20 @@ export interface StudentImportRow {
   email: string;
   password: string;
   classroomName: string;
+  rowNumber?: number;
+}
+
+export interface StudentImportSkippedRow {
+  rowNumber: number;
+  email: string;
+  reason: string;
 }
 
 export interface StudentImportResult {
   createdCount: number;
   updatedCount: number;
   skippedCount: number;
+  skippedRows: StudentImportSkippedRow[];
 }
 
 export async function importStudentsCSVBatch(rows: StudentImportRow[], isFinalBatch: boolean): Promise<StudentImportResult> {
@@ -26,25 +34,33 @@ export async function importStudentsCSVBatch(rows: StudentImportRow[], isFinalBa
   }
 
   const uniqueRows = new Map<string, StudentImportRow>();
-  let skippedCount = 0;
-  for (const row of rows) {
+  const skippedRows: StudentImportSkippedRow[] = [];
+  for (const [index, row] of rows.entries()) {
     const name = typeof row?.name === 'string' ? row.name.trim() : '';
     const email = typeof row?.email === 'string' ? row.email.trim() : '';
     const password = typeof row?.password === 'string' ? row.password.trim() : '';
     const classroomName = typeof row?.classroomName === 'string' ? row.classroomName.trim() : '';
-    if (!name || !email || !password) {
-      skippedCount++;
+    const rowNumber = row?.rowNumber ?? index + 2;
+    const missingFields = [
+      !name && 'name',
+      !email && 'email',
+      !password && 'password',
+    ].filter((field): field is string => Boolean(field));
+    if (missingFields.length) {
+      skippedRows.push({ rowNumber, email, reason: `Kolom ${missingFields.join(', ')} kosong.` });
       continue;
     }
     if (uniqueRows.has(email)) {
-      skippedCount++;
+      skippedRows.push({ rowNumber, email, reason: 'Email duplikat di dalam file.' });
       continue;
     }
-    uniqueRows.set(email, { name, email, password, classroomName });
+    uniqueRows.set(email, { name, email, password, classroomName, rowNumber });
   }
 
   const validRows = [...uniqueRows.values()];
-  if (!validRows.length) return { createdCount: 0, updatedCount: 0, skippedCount };
+  if (!validRows.length) {
+    return { createdCount: 0, updatedCount: 0, skippedCount: skippedRows.length, skippedRows };
+  }
 
   const existingUsers = await prisma.user.findMany({
     where: { email: { in: validRows.map((row) => row.email) } },
@@ -54,7 +70,11 @@ export async function importStudentsCSVBatch(rows: StudentImportRow[], isFinalBa
   const importableRows = validRows.filter((row) => {
     const existing = existingByEmail.get(row.email);
     if (existing && existing.role !== 'STUDENT') {
-      skippedCount++;
+      skippedRows.push({
+        rowNumber: row.rowNumber ?? 0,
+        email: row.email,
+        reason: `Email sudah digunakan akun dengan peran ${existing.role}.`,
+      });
       return false;
     }
     return true;
@@ -122,6 +142,7 @@ export async function importStudentsCSVBatch(rows: StudentImportRow[], isFinalBa
   return {
     createdCount: importableRows.filter((row) => !existingByEmail.has(row.email)).length,
     updatedCount: importableRows.filter((row) => existingByEmail.has(row.email)).length,
-    skippedCount,
+    skippedCount: skippedRows.length,
+    skippedRows,
   };
 }

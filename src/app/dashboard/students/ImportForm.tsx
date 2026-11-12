@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { importStudentsCSVBatch, type StudentImportRow, type StudentImportResult } from '@/app/actions/import';
+import { importStudentsCSVBatch, type StudentImportRow, type StudentImportResult, type StudentImportSkippedRow } from '@/app/actions/import';
 import { Upload, FileDown, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 const BATCH_SIZE = 25;
@@ -51,7 +51,11 @@ export default function ImportForm() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
-  const [message, setMessage] = useState<{ type: 'error'|'success', text: string } | null>(null);
+  const [message, setMessage] = useState<{
+    type: 'error'|'success';
+    text: string;
+    skippedRows?: StudentImportSkippedRow[];
+  } | null>(null);
 
   async function handleSubmit(formData: FormData) {
     setLoading(true);
@@ -59,7 +63,7 @@ export default function ImportForm() {
     setMessage(null);
     let completedBatches = 0;
     let totalBatches = 0;
-    const result: StudentImportResult = { createdCount: 0, updatedCount: 0, skippedCount: 0 };
+    const result: StudentImportResult = { createdCount: 0, updatedCount: 0, skippedCount: 0, skippedRows: [] };
 
     try {
       const file = formData.get('file');
@@ -77,11 +81,12 @@ export default function ImportForm() {
         throw new Error('Header CSV harus memuat kolom name, email, dan password.');
       }
 
-      const rows: StudentImportRow[] = parsedRows.slice(1).map((cells) => ({
+      const rows: StudentImportRow[] = parsedRows.slice(1).map((cells, index) => ({
         name: cells[nameIndex] ?? '',
         email: cells[emailIndex] ?? '',
         password: cells[passwordIndex] ?? '',
         classroomName: classroomIndex >= 0 ? cells[classroomIndex] ?? '' : '',
+        rowNumber: index + 2,
       }));
       if (!rows.length) throw new Error('Tidak ada baris data siswa setelah header.');
 
@@ -94,6 +99,7 @@ export default function ImportForm() {
         result.createdCount += batchResult.createdCount;
         result.updatedCount += batchResult.updatedCount;
         result.skippedCount += batchResult.skippedCount;
+        result.skippedRows.push(...batchResult.skippedRows);
         completedBatches++;
         setProgress(`Memproses bagian ${completedBatches} dari ${totalBatches}...`);
       }
@@ -101,6 +107,7 @@ export default function ImportForm() {
       setMessage({
         type: 'success',
         text: `Impor selesai: ${result.createdCount} siswa baru, ${result.updatedCount} akun diperbarui, ${result.skippedCount} baris dilewati.`,
+        skippedRows: result.skippedRows,
       });
       const fileInput = document.getElementById('file-upload') as HTMLInputElement;
       if (fileInput) fileInput.value = '';
@@ -160,6 +167,20 @@ export default function ImportForm() {
           {message.type === 'error' ? <AlertCircle className="w-5 h-5 mr-2" /> : <CheckCircle2 className="w-5 h-5 mr-2" />}
           {message.text}
         </div>
+      )}
+      {message?.skippedRows && message.skippedRows.length > 0 && (
+        <details className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+          <summary className="cursor-pointer font-semibold">
+            Lihat rincian {message.skippedRows.length} baris yang dilewati
+          </summary>
+          <ul className="mt-2 max-h-56 space-y-1 overflow-y-auto">
+            {message.skippedRows.map((row) => (
+              <li key={`${row.rowNumber}-${row.email}`}>
+                Baris {row.rowNumber}{row.email ? ` (${row.email})` : ''}: {row.reason}
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
     </div>
   );
