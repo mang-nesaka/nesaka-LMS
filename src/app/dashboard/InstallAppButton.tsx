@@ -70,7 +70,7 @@ export default function InstallAppButton() {
         title="Pasang LMS Nesaka di perangkat ini"
       >
         <Download className="h-4 w-4" />
-        <span>Pasang</span>
+        <span>Pasang APK Nesaka</span>
       </button>
       {showInstructions && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4" role="presentation" onClick={() => setShowInstructions(false)}>
