@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { logout } from '@/app/actions/auth';
+import InstallAppButton from './InstallAppButton';
 
 interface UserInfo {
   id: string;
@@ -386,25 +387,28 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
             </div>
           </div>
           
-          <Link 
-            href="/dashboard/profile"
-            className="flex items-center space-x-3 p-1.5 rounded-xl hover:bg-slate-50 transition-colors group"
-            title="Lihat Profil & Kartu Digital"
-          >
-            <div className="text-right hidden sm:block">
-              <span className="text-sm font-bold text-slate-800 group-hover:text-indigo-600 transition-colors block leading-tight">
-                {user.name}
-              </span>
-              <span className="text-xs text-slate-400">{user.email}</span>
-            </div>
-            <div className={`h-9 w-9 rounded-xl bg-gradient-to-tr ${roleDetails.avatarGrad} flex items-center justify-center text-white font-bold shadow-sm overflow-hidden group-hover:scale-105 transition-transform`}>
-              {user.hasAvatar ? (
-                <img src="/api/profile/photo" alt={user.name} className="w-full h-full object-cover" />
-              ) : (
-                initial
-              )}
-            </div>
-          </Link>
+          <div className="flex items-center gap-2 sm:gap-4">
+            <InstallAppButton />
+            <Link 
+              href="/dashboard/profile"
+              className="flex items-center space-x-3 p-1.5 rounded-xl hover:bg-slate-50 transition-colors group"
+              title="Lihat Profil & Kartu Digital"
+            >
+              <div className="text-right hidden sm:block">
+                <span className="text-sm font-bold text-slate-800 group-hover:text-indigo-600 transition-colors block leading-tight">
+                  {user.name}
+                </span>
+                <span className="text-xs text-slate-400">{user.email}</span>
+              </div>
+              <div className={`h-9 w-9 rounded-xl bg-gradient-to-tr ${roleDetails.avatarGrad} flex items-center justify-center text-white font-bold shadow-sm overflow-hidden group-hover:scale-105 transition-transform`}>
+                {user.hasAvatar ? (
+                  <img src="/api/profile/photo" alt={user.name} className="w-full h-full object-cover" />
+                ) : (
+                  initial
+                )}
+              </div>
+            </Link>
+          </div>
         </header>
 
         {/* Page Content */}

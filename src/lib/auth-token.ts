@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
-const TOKEN_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
+export const AUTH_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
 
 function getSigningSecret(): string {
   const secret = process.env.AUTH_SECRET || process.env.DATABASE_URL;
@@ -25,7 +25,7 @@ export function verifyAuthToken(token: string, now: number): string | null {
 
   const [userId, issuedAtText, signature] = parts;
   const issuedAt = Number(issuedAtText);
-  if (!userId || !Number.isInteger(issuedAt) || issuedAt > now || now - issuedAt > TOKEN_MAX_AGE_SECONDS) {
+  if (!userId || !Number.isInteger(issuedAt) || issuedAt > now || now - issuedAt > AUTH_SESSION_MAX_AGE_SECONDS) {
     return null;
   }
 

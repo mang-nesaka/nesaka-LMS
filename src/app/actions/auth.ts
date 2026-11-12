@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import bcrypt from 'bcryptjs';
-import { createAuthToken } from '@/lib/auth-token';
+import { AUTH_SESSION_MAX_AGE_SECONDS, createAuthToken } from '@/lib/auth-token';
 
 export async function login(formData: FormData) {
   const email = formData.get('email') as string;
@@ -44,7 +44,7 @@ export async function login(formData: FormData) {
   cookieStore.set('auth_token', createAuthToken(user.id, Math.floor(Date.now() / 1000)), {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    maxAge: 60 * 60 * 24 * 7, // 1 week
+    maxAge: AUTH_SESSION_MAX_AGE_SECONDS,
     path: '/',
   });
 

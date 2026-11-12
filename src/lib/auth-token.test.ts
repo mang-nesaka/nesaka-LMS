@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createAuthToken, verifyAuthToken } from './auth-token';
+import { AUTH_SESSION_MAX_AGE_SECONDS, createAuthToken, verifyAuthToken } from './auth-token';
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -11,6 +11,7 @@ describe('signed auth tokens', () => {
     const token = createAuthToken('user_123', 1_800_000_000);
 
     expect(verifyAuthToken(token, 1_800_000_100)).toBe('user_123');
+    expect(verifyAuthToken(token, 1_800_000_000 + AUTH_SESSION_MAX_AGE_SECONDS)).toBe('user_123');
   });
 
   it('rejects modified, expired, and unsigned tokens', () => {
@@ -18,7 +19,7 @@ describe('signed auth tokens', () => {
     const token = createAuthToken('user_123', 1_800_000_000);
 
     expect(verifyAuthToken(`${token}x`, 1_800_000_100)).toBeNull();
-    expect(verifyAuthToken(token, 1_800_000_000 + 60 * 60 * 24 * 7 + 1)).toBeNull();
+    expect(verifyAuthToken(token, 1_800_000_000 + AUTH_SESSION_MAX_AGE_SECONDS + 1)).toBeNull();
     expect(verifyAuthToken('user_123', 1_800_000_100)).toBeNull();
   });
 
