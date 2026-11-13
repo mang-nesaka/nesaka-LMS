@@ -14,6 +14,7 @@ import {
   getNextAttendanceType,
 } from '@/lib/attendance';
 import { requireRole } from '@/lib/auth';
+import { buildStudentAttendanceSummary, getStudentAttendanceDateRanges } from '@/lib/studentAttendanceSummary';
 
 
 // Format local date YYYY-MM-DD
@@ -136,6 +137,21 @@ export async function getStudentTodayAttendance() {
   const setting = await getSchoolSetting();
 
   return { attendance, setting, today: dateStr };
+}
+
+export async function getStudentAttendanceSummary() {
+  const { id: studentId } = await requireRole('STUDENT');
+  const today = getLocalDateString();
+  const { semester } = getStudentAttendanceDateRanges(today);
+  const attendanceRecords = await prisma.studentAttendance.findMany({
+    where: {
+      studentId,
+      date: { gte: semester.startDate, lte: today },
+    },
+    select: { date: true, checkInStatus: true },
+  });
+
+  return buildStudentAttendanceSummary(attendanceRecords, today);
 }
 
 export async function submitStudentAttendance(data: {

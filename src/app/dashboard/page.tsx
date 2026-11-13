@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma';
 import { getSessionUserId } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
+import { getStudentAttendanceSummary } from '@/app/actions/attendance';
+import StudentAttendanceRecap from './StudentAttendanceRecap';
 import { 
   BookOpen, Users, CheckCircle, Clock, Laptop, 
   FileText, Plus, ChevronRight, AlertCircle, FileSpreadsheet,
@@ -74,6 +76,7 @@ export default async function DashboardPage() {
       }),
     ]);
 
+    const attendanceSummary = await getStudentAttendanceSummary();
     const pendingAssignments = assignments.filter((a) => a.submissions.length === 0).length;
     const readyExams = exams.filter((e) => e.results.length === 0).length;
     const completedTasks = assignments.filter((a) => a.submissions.length > 0).length;
@@ -188,6 +191,8 @@ export default async function DashboardPage() {
             </div>
           </div>
         </div>
+
+        <StudentAttendanceRecap initialSummary={attendanceSummary} />
 
         {/* Konten Utama Siswa: Kelas Saya & Jadwal CBT */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
