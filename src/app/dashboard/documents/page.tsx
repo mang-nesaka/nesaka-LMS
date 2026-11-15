@@ -30,7 +30,10 @@ export default async function DocumentsPage({ searchParams }: { searchParams: Pr
   // TAMPILAN UNTUK SISWA: Upload Akte Kelahiran, Kartu Keluarga, dan Ijazah SMP
   if (currentUser.role === 'STUDENT') {
     const rawDocuments = await prisma.studentDocument.findMany({
-      where: { studentId: currentUser.id },
+      where: {
+        studentId: currentUser.id,
+        docType: { in: ['AKTE_KELAHIRAN', 'KARTU_KELUARGA', 'IJAZAH_SMP'] },
+      },
       orderBy: { createdAt: 'desc' },
       select: {
         id: true, docType: true, fileName: true, fileType: true, fileSize: true,
@@ -73,6 +76,7 @@ export default async function DocumentsPage({ searchParams }: { searchParams: Pr
         select: { nisn: true, sekolahAsal: true },
       },
       documents: {
+        where: { docType: { in: ['AKTE_KELAHIRAN', 'KARTU_KELUARGA', 'IJAZAH_SMP'] } },
         orderBy: { createdAt: 'desc' },
         select: {
           id: true, docType: true, fileName: true, fileType: true, fileSize: true,

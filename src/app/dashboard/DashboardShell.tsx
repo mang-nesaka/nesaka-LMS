@@ -43,6 +43,7 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
         { name: 'Laporan Kerusakan Sarpras', href: '/dashboard/sarpras', icon: Wrench },
         { name: 'Profil & Kartu Siswa', href: '/dashboard/profile', icon: IdCard },
         { name: 'Upload Berkas (Kelas 10)', href: '/dashboard/documents', icon: FileUp },
+        { name: 'E-Ijazah Kelas XII', href: '/dashboard/ijazah', icon: GraduationCap },
         { name: 'Formulir Dapodik', href: '/dashboard/dapodik', icon: FileSpreadsheet },
         { name: 'Pengaturan Akun', href: '/dashboard/settings', icon: Settings },
       ];
@@ -83,6 +84,7 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
         { name: 'Manajemen', href: '/dashboard/management', icon: Users },
         { name: 'Publikasi Ujian CBT', href: '/dashboard/exams', icon: Laptop },
         { name: 'Verifikasi Dokumen Siswa', href: '/dashboard/documents', icon: FileCheck },
+        { name: 'Kelola E-Ijazah XII', href: '/dashboard/ijazah', icon: GraduationCap },
         { name: 'Rekap Dapodik (F-PD)', href: '/dashboard/dapodik', icon: FileSpreadsheet },
         { name: 'Koreksi Data Diri Siswa', href: '/dashboard/tu/corrections', icon: AlertCircle },
         { name: 'Cetak Barcode Ruang Kelas', href: '/dashboard/classrooms', icon: QrCode },
@@ -174,6 +176,7 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
       { name: 'Siswa Non-Smartphone (TU)', href: '/dashboard/tu/non-smartphone', icon: PhoneOff },
       { name: 'Manajemen', href: '/dashboard/management', icon: Users },
       { name: 'Verifikasi Dokumen (TU)', href: '/dashboard/documents', icon: FileCheck },
+      { name: 'Kelola E-Ijazah XII', href: '/dashboard/ijazah', icon: GraduationCap },
       { name: 'Koreksi Data Diri (TU)', href: '/dashboard/tu/corrections', icon: AlertCircle },
       { name: 'Rekap Dapodik (TU)', href: '/dashboard/dapodik', icon: FileSpreadsheet },
       { name: 'Pengaturan GPS Sekolah (TU)', href: '/dashboard/settings/school', icon: MapPin },
