@@ -30,16 +30,29 @@ export default function PushNotificationControl() {
   useEffect(() => {
     if (!supported) return;
 
-    void navigator.serviceWorker.getRegistration('/').then(async (registration) => {
-      const subscription = await registration?.pushManager.getSubscription();
+    let isMounted = true;
+
+    void navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {});
+
+    void navigator.serviceWorker.ready.then(async (registration) => {
+      if (!isMounted) return;
+      const subscription = await registration.pushManager.getSubscription();
       setEnabled(Boolean(subscription));
-    });
+    }).catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
   }, [supported]);
 
   async function enableNotifications() {
     setBusy(true);
     setStatus('');
     try {
+      if (Notification.permission === 'denied') {
+        throw new Error('Izin notifikasi diblokir di browser. Mohon izinkan notifikasi pada pengaturan browser Anda.');
+      }
+
       const permission = Notification.permission === 'default'
         ? await Notification.requestPermission()
         : Notification.permission;
@@ -49,11 +62,35 @@ export default function PushNotificationControl() {
       const keyData = await keyResponse.json();
       if (!keyResponse.ok) throw new Error(keyData.error || 'Konfigurasi notifikasi belum tersedia.');
 
-      const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: decodeApplicationServerKey(keyData.publicKey),
-      });
+      const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+      const registration = await navigator.serviceWorker.ready;
+
+      // Ensure service worker is fully active before subscribing
+      const activeWorker = registration.active || reg.active;
+      if (!activeWorker) {
+        const candidate = registration.installing || registration.waiting || reg.installing || reg.waiting;
+        if (candidate) {
+          await new Promise<void>((resolve) => {
+            const checkState = () => {
+              if (candidate.state === 'activated') {
+                candidate.removeEventListener('statechange', checkState);
+                resolve();
+              }
+            };
+            candidate.addEventListener('statechange', checkState);
+            setTimeout(resolve, 3000);
+          });
+        }
+      }
+
+      let subscription = await registration.pushManager.getSubscription();
+      if (!subscription) {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: decodeApplicationServerKey(keyData.publicKey),
+        });
+      }
+
       const response = await fetch('/api/push-subscriptions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -75,8 +112,8 @@ export default function PushNotificationControl() {
     setBusy(true);
     setStatus('');
     try {
-      const registration = await navigator.serviceWorker.getRegistration('/');
-      const subscription = await registration?.pushManager.getSubscription();
+      const registration = await navigator.serviceWorker.ready;
+      const subscription = await registration.pushManager.getSubscription();
       if (subscription) {
         await fetch('/api/push-subscriptions', {
           method: 'DELETE',
