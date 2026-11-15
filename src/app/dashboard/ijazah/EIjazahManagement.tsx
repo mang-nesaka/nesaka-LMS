@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from 'react';
-import { Download, FileUp, Loader2, Search } from 'lucide-react';
+import { Download, FileUp, Loader2, Search, Eye } from 'lucide-react';
 import { uploadEIjazahAction } from '@/app/actions/document';
 
 interface EIjazahStudent {
@@ -119,14 +119,26 @@ export default function EIjazahManagement({ students }: { students: EIjazahStude
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-2">
                       {student.fileName && (
-                        <a
-                          href={`/api/e-ijazah/${student.id}`}
-                          aria-label={`Unduh E-Ijazah ${student.name}`}
-                          title="Unduh E-Ijazah"
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50"
-                        >
-                          <Download className="h-4 w-4" />
-                        </a>
+                        <>
+                          <a
+                            href={`/api/e-ijazah/${student.id}?preview=true`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label={`Preview E-Ijazah ${student.name}`}
+                            title="Preview E-Ijazah (Tab Baru)"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50 transition-colors"
+                          >
+                            <Eye className="h-4 w-4 text-emerald-600" />
+                          </a>
+                          <a
+                            href={`/api/e-ijazah/${student.id}`}
+                            aria-label={`Unduh E-Ijazah ${student.name}`}
+                            title="Unduh E-Ijazah"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50 transition-colors"
+                          >
+                            <Download className="h-4 w-4" />
+                          </a>
+                        </>
                       )}
                       <label className={`inline-flex h-9 cursor-pointer items-center gap-2 rounded-md px-3 text-sm font-semibold text-white ${isBusy ? 'bg-slate-400' : 'bg-emerald-700 hover:bg-emerald-800'}`}>
                         {isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileUp className="h-4 w-4" />}

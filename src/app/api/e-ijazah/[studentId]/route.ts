@@ -42,12 +42,16 @@ export async function GET(_request: Request, { params }: RouteContext) {
     return new NextResponse('Invalid document data', { status: 500 });
   }
 
+  const { searchParams } = new URL(_request.url);
+  const isPreview = searchParams.get('preview') === 'true' || searchParams.get('inline') === 'true';
+  const dispositionType = isPreview ? 'inline' : 'attachment';
+
   const bytes = Buffer.from(document.fileUrl.slice(prefix.length), 'base64');
   return new NextResponse(bytes, {
     headers: {
       'Content-Type': 'application/pdf',
       'Content-Length': String(bytes.byteLength),
-      'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(document.fileName)}`,
+      'Content-Disposition': `${dispositionType}; filename*=UTF-8''${encodeURIComponent(document.fileName)}`,
       'Cache-Control': 'private, no-store',
       'X-Content-Type-Options': 'nosniff',
     },
