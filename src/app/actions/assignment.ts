@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { requireRole } from '@/lib/auth';
+import { sendPushToUsers } from '@/lib/webPush';
 
 
 export async function createAssignment(formData: FormData) {
@@ -18,7 +19,7 @@ export async function createAssignment(formData: FormData) {
 
   const course = await prisma.course.findUnique({
     where: { id: courseId },
-    select: { teacherId: true },
+    select: { teacherId: true, enrollments: { select: { studentId: true } } },
   });
   if (!course) throw new Error('Kelas tidak ditemukan.');
   if (currentUser.role !== 'ADMIN' && course.teacherId !== currentUser.id) {
@@ -48,6 +49,16 @@ export async function createAssignment(formData: FormData) {
       lessonId: lesson.id,
     },
   });
+
+  try {
+    await sendPushToUsers(course.enrollments.map((enrollment) => enrollment.studentId), {
+      title: 'Tugas baru',
+      body: `${currentUser.name} membagikan tugas: ${title}`,
+      url: '/dashboard/assignments',
+    });
+  } catch (error) {
+    console.error('Gagal mengirim notifikasi tugas baru.', error);
+  }
 
   revalidatePath('/dashboard/assignments');
 }

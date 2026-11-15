@@ -46,3 +46,15 @@ npm run db:backfill-classrooms
 ```
 
 The backfill links students and homeroom teachers by their existing class names, and teachers by their existing teaching schedules. It reports unmatched names and duplicate homeroom assignments for review instead of guessing.
+
+## Push notifications
+
+Generate a VAPID key pair with `npx web-push generate-vapid-keys`, then configure these environment variables for local development and production:
+
+```env
+NEXT_PUBLIC_VAPID_PUBLIC_KEY="..."
+VAPID_PRIVATE_KEY="..."
+VAPID_SUBJECT="mailto:admin@example.com"
+```
+
+Apply the Prisma schema change with `npm run db:push`. Users can then enable notifications from the dashboard on a supported browser. New assignments are pushed to enrolled students who enabled notifications. Push delivery requires HTTPS (localhost is supported for development).

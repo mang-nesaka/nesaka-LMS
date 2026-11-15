@@ -13,6 +13,7 @@ import {
 import { useState } from 'react';
 import { logout } from '@/app/actions/auth';
 import InstallAppButton from './InstallAppButton';
+import PushNotificationControl from './PushNotificationControl';
 
 interface UserInfo {
   id: string;
@@ -391,6 +392,7 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
           </div>
           
           <div className="flex items-center gap-2 sm:gap-4">
+            <PushNotificationControl />
             <InstallAppButton />
             <Link 
               href="/dashboard/profile"
