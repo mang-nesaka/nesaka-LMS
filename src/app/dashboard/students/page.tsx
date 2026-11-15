@@ -25,7 +25,7 @@ export default async function StudentsPage() {
 
   // Ambil data semua siswa
   const students = await prisma.user.findMany({
-    where: { role: 'STUDENT' },
+    where: { role: 'STUDENT', graduationYear: null },
     include: {
       _count: { select: { enrollments: true, submissions: true } },
       dapodikForm: { select: { id: true } }

@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { requireRole } from '@/lib/auth';
+import { getNextClassLevel } from '@/lib/studentPromotion';
 
 export async function createTeacherAccount(formData: FormData) {
   await requireRole('ADMIN', 'TU');
@@ -50,6 +51,151 @@ export async function assignStudentToClass(formData: FormData) {
   });
   revalidateClassAssignments();
   return { success: true };
+}
+
+export async function promoteStudentsInBulk(formData: FormData) {
+  await requireRole('ADMIN', 'TU');
+
+  const mode = String(formData.get('mode') ?? '');
+  const excludedStudentIds = parseExcludedStudentIds(formData);
+  if (mode === 'graduate') {
+    const graduationYear = Number(formData.get('graduationYear'));
+    if (!Number.isInteger(graduationYear) || graduationYear < 2000 || graduationYear > 2100) {
+      throw new Error('Tahun kelulusan harus antara 2000 dan 2100.');
+    }
+    if (excludedStudentIds.length) {
+      const validExclusions = await prisma.user.count({
+        where: {
+          id: { in: excludedStudentIds },
+          role: 'STUDENT',
+          graduationYear: null,
+          classroom: { level: '12' },
+        },
+      });
+      if (validExclusions !== excludedStudentIds.length) {
+        throw new Error('Daftar pengecualian kelas XII sudah berubah. Muat ulang halaman dan coba kembali.');
+      }
+    }
+
+    const result = await prisma.user.updateMany({
+      where: {
+        role: 'STUDENT',
+        graduationYear: null,
+        classroom: { level: '12' },
+        ...(excludedStudentIds.length ? { id: { notIn: excludedStudentIds } } : {}),
+      },
+      data: { graduationYear, classroomId: null, studentClass: null },
+    });
+    revalidateStudentLists();
+    return { changedCount: result.count };
+  }
+
+  if (mode !== 'promote') throw new Error('Jenis proses kenaikan kelas tidak valid.');
+
+  const sourceLevel = String(formData.get('sourceLevel') ?? '');
+  const targetLevel = getNextClassLevel(sourceLevel);
+  if (!targetLevel) throw new Error('Kenaikan hanya dapat dilakukan dari kelas X atau XI.');
+
+  let mappings: Array<{ sourceId: string; targetId: string }>;
+  try {
+    const parsed: unknown = JSON.parse(String(formData.get('mappings') ?? ''));
+    if (!Array.isArray(parsed)) throw new Error();
+    mappings = parsed.map((entry) => {
+      if (
+        !entry ||
+        typeof entry !== 'object' ||
+        typeof entry.sourceId !== 'string' ||
+        typeof entry.targetId !== 'string'
+      ) throw new Error();
+      return { sourceId: entry.sourceId, targetId: entry.targetId };
+    });
+  } catch {
+    throw new Error('Pemetaan kelas tidak valid. Muat ulang halaman dan coba kembali.');
+  }
+
+  if (!mappings.length || mappings.length > 100) throw new Error('Tidak ada pemetaan kelas yang dapat diproses.');
+  const sourceIds = mappings.map((mapping) => mapping.sourceId);
+  const targetIds = mappings.map((mapping) => mapping.targetId);
+  if (new Set(sourceIds).size !== sourceIds.length || new Set(targetIds).size !== targetIds.length) {
+    throw new Error('Setiap kelas harus memiliki tujuan yang berbeda.');
+  }
+
+  const classrooms = await prisma.classroom.findMany({
+    where: { id: { in: [...sourceIds, ...targetIds] } },
+    select: { id: true, name: true, level: true },
+  });
+  const classroomById = new Map(classrooms.map((classroom) => [classroom.id, classroom]));
+  if (classrooms.length !== new Set([...sourceIds, ...targetIds]).size) {
+    throw new Error('Salah satu kelas tidak ditemukan. Muat ulang halaman dan coba kembali.');
+  }
+  for (const mapping of mappings) {
+    if (
+      classroomById.get(mapping.sourceId)?.level !== sourceLevel ||
+      classroomById.get(mapping.targetId)?.level !== targetLevel
+    ) throw new Error('Pemetaan harus menghubungkan kelas ke tingkat berikutnya.');
+  }
+
+  const activeSourceStudents = await prisma.user.findMany({
+    where: { role: 'STUDENT', graduationYear: null, classroom: { level: sourceLevel } },
+    select: { id: true, classroomId: true },
+  });
+  const activeSourceStudentIds = new Set(activeSourceStudents.map((student) => student.id));
+  if (excludedStudentIds.some((studentId) => !activeSourceStudentIds.has(studentId))) {
+    throw new Error('Daftar siswa yang dikecualikan sudah berubah. Muat ulang halaman dan coba kembali.');
+  }
+  const mappedSourceIds = new Set(sourceIds);
+  if (activeSourceStudents.some((student) =>
+    student.classroomId &&
+    !excludedStudentIds.includes(student.id) &&
+    !mappedSourceIds.has(student.classroomId)
+  )) {
+    throw new Error('Semua kelas yang memiliki siswa harus dipetakan sebelum diproses.');
+  }
+  const occupiedTarget = await prisma.user.findFirst({
+    where: {
+      role: 'STUDENT',
+      graduationYear: null,
+      classroomId: { in: targetIds },
+    },
+    select: { id: true },
+  });
+  if (occupiedTarget) {
+    throw new Error('Kelas tujuan masih berisi siswa. Proses angkatan di kelas tujuan terlebih dahulu.');
+  }
+
+  const updates = mappings.map(({ sourceId, targetId }) => {
+    const target = classroomById.get(targetId);
+    if (!target) throw new Error('Kelas tujuan tidak ditemukan.');
+    return prisma.user.updateMany({
+      where: {
+        role: 'STUDENT',
+        graduationYear: null,
+        classroomId: sourceId,
+        ...(excludedStudentIds.length ? { id: { notIn: excludedStudentIds } } : {}),
+      },
+      data: { classroomId: targetId, studentClass: target.name },
+    });
+  });
+  const results = await prisma.$transaction(updates);
+  revalidateStudentLists();
+  return { changedCount: results.reduce((total, result) => total + result.count, 0) };
+}
+
+function parseExcludedStudentIds(formData: FormData): string[] {
+  const rawIds = String(formData.get('excludedStudentIds') ?? '[]');
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(rawIds);
+  } catch {
+    throw new Error('Daftar pengecualian siswa tidak valid.');
+  }
+  if (
+    !Array.isArray(parsed) ||
+    parsed.length > 2000 ||
+    parsed.some((studentId) => typeof studentId !== 'string' || !studentId) ||
+    new Set(parsed).size !== parsed.length
+  ) throw new Error('Daftar pengecualian siswa tidak valid.');
+  return parsed;
 }
 
 export async function assignTeacherToClass(formData: FormData) {
@@ -118,6 +264,19 @@ function revalidateClassAssignments() {
   revalidatePath('/dashboard/teacher-agenda');
   revalidatePath('/dashboard/exams/recap');
   revalidatePath('/dashboard/walikelas');
+}
+
+function revalidateStudentLists() {
+  revalidateClassAssignments();
+  revalidatePath('/dashboard/students');
+  revalidatePath('/dashboard/management');
+  revalidatePath('/dashboard/dapodik');
+  revalidatePath('/dashboard/ijazah');
+  revalidatePath('/dashboard/attendance');
+  revalidatePath('/dashboard/tu/non-smartphone');
+  revalidatePath('/dashboard/kesiswaan');
+  revalidatePath('/dashboard/documents');
+  revalidatePath('/dashboard');
 }
 
 export async function clearDemoAccounts() {

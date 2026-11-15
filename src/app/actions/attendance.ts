@@ -318,7 +318,7 @@ export async function getClassAttendanceRecap(options: {
   const todayStr = getLocalDateString();
 
   // Query students
-  const studentWhere: Prisma.UserWhereInput = { role: 'STUDENT' };
+  const studentWhere: Prisma.UserWhereInput = { role: 'STUDENT', graduationYear: null };
   if (currentUser.role === 'WALI_KELAS') {
     studentWhere.classroomId = currentUser.homeroomClassId ?? '__no_assigned_class__';
   } else if (classroomId) {

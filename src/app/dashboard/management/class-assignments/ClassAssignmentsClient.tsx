@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight, Link2, School, Trash2, Users } from 'lucide-react';
+import { ChevronLeft, ChevronRight, GraduationCap, Link2, School, Trash2, Users } from 'lucide-react';
 import {
   assignHomeroomTeacherToClass,
   assignStudentToClass,
@@ -40,17 +40,25 @@ interface HomeroomTeacherRecord {
   homeroomClass: { name: string } | null;
 }
 
+interface AlumniRecord {
+  id: string;
+  name: string;
+  email: string;
+  graduationYear: number | null;
+}
+
 interface Props {
   classrooms: ClassroomOption[];
   teachers: TeacherRecord[];
   students: StudentRecord[];
+  alumni: AlumniRecord[];
   homeroomTeachers: HomeroomTeacherRecord[];
 }
 
 type AssignmentAction = (formData: FormData) => Promise<unknown>;
-type Tab = 'teachers' | 'students' | 'homeroom';
+type Tab = 'teachers' | 'students' | 'homeroom' | 'alumni';
 
-export default function ClassAssignmentsClient({ classrooms, teachers, students, homeroomTeachers }: Props) {
+export default function ClassAssignmentsClient({ classrooms, teachers, students, alumni, homeroomTeachers }: Props) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>('teachers');
   const [search, setSearch] = useState('');
@@ -60,14 +68,22 @@ export default function ClassAssignmentsClient({ classrooms, teachers, students,
   const normalizedSearch = search.trim().toLowerCase();
   const visibleTeachers = teachers.filter((teacher) => `${teacher.name} ${teacher.email}`.toLowerCase().includes(normalizedSearch));
   const visibleStudents = students.filter((student) => `${student.name} ${student.email} ${student.studentClass ?? ''}`.toLowerCase().includes(normalizedSearch));
+  const visibleAlumni = alumni.filter((student) => `${student.name} ${student.email} ${student.graduationYear ?? ''}`.toLowerCase().includes(normalizedSearch));
   const visibleHomeroomTeachers = homeroomTeachers.filter((teacher) => `${teacher.name} ${teacher.email} ${teacher.waliKelasOf ?? ''}`.toLowerCase().includes(normalizedSearch));
-  const visibleRows = activeTab === 'teachers' ? visibleTeachers : activeTab === 'students' ? visibleStudents : visibleHomeroomTeachers;
+  const visibleRows = activeTab === 'teachers'
+    ? visibleTeachers
+    : activeTab === 'students'
+      ? visibleStudents
+      : activeTab === 'alumni'
+        ? visibleAlumni
+        : visibleHomeroomTeachers;
   const pageSize = 50;
   const pageCount = Math.max(1, Math.ceil(visibleRows.length / pageSize));
   const currentPage = Math.min(page, pageCount - 1);
   const pageStart = currentPage * pageSize;
   const pagedTeachers = visibleTeachers.slice(pageStart, pageStart + pageSize);
   const pagedStudents = visibleStudents.slice(pageStart, pageStart + pageSize);
+  const pagedAlumni = visibleAlumni.slice(pageStart, pageStart + pageSize);
   const pagedHomeroomTeachers = visibleHomeroomTeachers.slice(pageStart, pageStart + pageSize);
 
   async function submitAssignment(event: FormEvent<HTMLFormElement>, action: AssignmentAction, successText: string) {
@@ -90,6 +106,7 @@ export default function ClassAssignmentsClient({ classrooms, teachers, students,
     { id: 'teachers', label: 'Guru', count: teachers.length },
     { id: 'students', label: 'Siswa', count: students.length },
     { id: 'homeroom', label: 'Wali kelas', count: homeroomTeachers.length },
+    { id: 'alumni', label: 'Alumni', count: alumni.length },
   ];
 
   return (
@@ -115,7 +132,11 @@ export default function ClassAssignmentsClient({ classrooms, teachers, students,
             onClick={() => { setActiveTab(tab.id); setSearch(''); setPage(0); setNotice(null); }}
             className={`flex min-h-12 shrink-0 items-center gap-2 border-b-2 px-4 text-sm font-semibold ${activeTab === tab.id ? 'border-teal-700 text-teal-800' : 'border-transparent text-slate-500 hover:text-slate-800'}`}
           >
-            {tab.id === 'teachers' ? <School className="h-4 w-4" /> : <Users className="h-4 w-4" />}
+            {tab.id === 'teachers'
+              ? <School className="h-4 w-4" />
+              : tab.id === 'alumni'
+                ? <GraduationCap className="h-4 w-4" />
+                : <Users className="h-4 w-4" />}
             {tab.label}
             <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">{tab.count}</span>
           </button>
@@ -212,6 +233,27 @@ export default function ClassAssignmentsClient({ classrooms, teachers, students,
                   </tr>
                 ))}
                 {!visibleStudents.length && <tr><td colSpan={3} className="px-4 py-8 text-center text-slate-500">Tidak ada siswa yang cocok.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {activeTab === 'alumni' && (
+        <section className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[560px] text-left text-sm">
+              <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                <tr><th className="px-4 py-3">Alumni</th><th className="px-4 py-3">Tahun kelulusan</th></tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {pagedAlumni.map((student) => (
+                  <tr key={student.id}>
+                    <td className="px-4 py-3"><strong className="block text-slate-900">{student.name}</strong><span className="text-xs text-slate-500">{student.email}</span></td>
+                    <td className="px-4 py-3 text-slate-700">{student.graduationYear}</td>
+                  </tr>
+                ))}
+                {!visibleAlumni.length && <tr><td colSpan={2} className="px-4 py-8 text-center text-slate-500">Belum ada alumni yang cocok.</td></tr>}
               </tbody>
             </table>
           </div>

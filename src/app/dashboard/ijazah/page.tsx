@@ -13,6 +13,7 @@ export default async function EIjazahPage() {
       select: {
         name: true,
         studentClass: true,
+        graduationYear: true,
         classroom: { select: { name: true, level: true } },
         documents: {
           where: { docType: 'E_IJAZAH' },
@@ -36,10 +37,12 @@ export default async function EIjazahPage() {
         <header className="border-b border-slate-200 pb-5">
           <p className="text-sm font-semibold text-emerald-700">Layanan Kelulusan</p>
           <h1 className="mt-1 text-2xl font-bold text-slate-900">E-Ijazah</h1>
-          <p className="mt-2 text-sm text-slate-600">{student.name} · {student.classroom?.name ?? student.studentClass ?? 'Kelas belum terdata'}</p>
+          <p className="mt-2 text-sm text-slate-600">
+            {student.name} · {student.graduationYear ? `Alumni ${student.graduationYear}` : student.classroom?.name ?? student.studentClass ?? 'Kelas belum terdata'}
+          </p>
         </header>
 
-        {!isEligible ? (
+          {!isEligible && !student.graduationYear ? (
           <p className="rounded-md border border-slate-200 bg-white p-5 text-sm text-slate-700">
             E-Ijazah tersedia untuk siswa kelas XII.
           </p>
@@ -58,7 +61,9 @@ export default async function EIjazahPage() {
           </section>
         ) : (
           <p className="rounded-md border border-slate-200 bg-white p-5 text-sm text-slate-700">
-            E-Ijazah Anda belum diunggah oleh TU/admin.
+            {student.graduationYear
+              ? `E-Ijazah belum tersedia untuk Alumni ${student.graduationYear}.`
+              : 'E-Ijazah Anda belum diunggah oleh TU/admin.'}
           </p>
         )}
       </main>

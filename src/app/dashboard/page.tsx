@@ -555,7 +555,7 @@ export default async function DashboardPage() {
         },
         orderBy: { scanTime: 'desc' },
       }),
-      prisma.user.count({ where: { role: 'STUDENT' } }),
+      prisma.user.count({ where: { role: 'STUDENT', graduationYear: null } }),
       prisma.studentAttendance.count({
         where: { date: todayStr, checkInStatus: { in: ['HADIR', 'TERLAMBAT'] } },
       }),
@@ -724,7 +724,7 @@ export default async function DashboardPage() {
   // TAMPILAN DASHBOARD TATA USAHA (TU) & ADMIN
   // ==========================================
   const [totalStudents, totalCourses, dapodikCount, totalExams] = await prisma.$transaction([
-    prisma.user.count({ where: { role: 'STUDENT' } }),
+    prisma.user.count({ where: { role: 'STUDENT', graduationYear: null } }),
     prisma.course.count(),
     prisma.dapodikForm.count(),
     prisma.exam.count(),

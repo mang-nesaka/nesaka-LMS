@@ -248,7 +248,7 @@ export async function getNonSmartphoneStudents(filter?: { class?: string; search
   await requireRole('TU', 'ADMIN');
   const todayStr = getLocalDateString();
 
-  const where: Prisma.UserWhereInput = { role: 'STUDENT' };
+  const where: Prisma.UserWhereInput = { role: 'STUDENT', graduationYear: null };
   if (filter?.class && filter.class !== 'ALL') {
     where.studentClass = filter.class;
   }

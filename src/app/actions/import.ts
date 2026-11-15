@@ -109,7 +109,7 @@ export async function importStudentsCSVBatch(rows: StudentImportRow[], isFinalBa
       update: {
         name: row.name,
         password: row.passwordHash,
-        ...(classroom ? { classroomId: classroom.id, studentClass: classroom.name } : {}),
+        ...(classroom ? { classroomId: classroom.id, studentClass: classroom.name, graduationYear: null } : {}),
       },
       create: {
         name: row.name,

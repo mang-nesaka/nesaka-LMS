@@ -23,7 +23,7 @@ export default async function ManagementPage() {
 
   const [students, teachers, demoStudentCount, demoTeacherCount, demoAccounts] = await Promise.all([
     prisma.user.findMany({
-      where: { role: 'STUDENT' },
+      where: { role: 'STUDENT', graduationYear: null },
       select: {
         id: true,
         name: true,

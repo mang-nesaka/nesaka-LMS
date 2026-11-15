@@ -68,7 +68,7 @@ export default async function DapodikPage() {
     orderBy: { createdAt: 'desc' },
   });
 
-  const totalStudents = await prisma.user.count({ where: { role: 'STUDENT' } });
+  const totalStudents = await prisma.user.count({ where: { role: 'STUDENT', graduationYear: null } });
   const totalSubmitted = allSubmissions.length;
   const pendingCount = Math.max(0, totalStudents - totalSubmitted);
 
