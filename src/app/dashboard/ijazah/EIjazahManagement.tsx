@@ -16,15 +16,18 @@ interface EIjazahStudent {
 
 export default function EIjazahManagement({ students }: { students: EIjazahStudent[] }) {
   const [query, setQuery] = useState('');
+  const [selectedClass, setSelectedClass] = useState('');
   const [busyStudentId, setBusyStudentId] = useState<string | null>(null);
   const [message, setMessage] = useState<{ studentId: string; text: string; error: boolean } | null>(null);
 
   const normalizedQuery = query.trim().toLowerCase();
-  const filteredStudents = normalizedQuery
-    ? students.filter((student) =>
-      `${student.name} ${student.email} ${student.className}`.toLowerCase().includes(normalizedQuery),
-    )
-    : students;
+  const classes = [...new Set(students.map((student) => student.className))].sort((a, b) => a.localeCompare(b));
+  const filteredStudents = students.filter((student) => {
+    const matchesClass = !selectedClass || student.className === selectedClass;
+    const matchesQuery = !normalizedQuery
+      || `${student.name} ${student.email} ${student.className}`.toLowerCase().includes(normalizedQuery);
+    return matchesClass && matchesQuery;
+  });
 
   async function handleUpload(studentId: string, file: File | undefined, input: HTMLInputElement) {
     if (!file) return;
@@ -57,16 +60,33 @@ export default function EIjazahManagement({ students }: { students: EIjazahStude
       </header>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-slate-600">{students.length} siswa kelas XII</p>
-        <label className="relative block w-full sm:max-w-sm">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Cari nama, email, atau kelas"
-            className="h-10 w-full rounded-md border border-slate-300 bg-white pl-9 pr-3 text-sm text-slate-900 outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20"
-          />
-        </label>
+        <p className="text-sm text-slate-600">
+          {selectedClass || normalizedQuery
+            ? `${filteredStudents.length} dari ${students.length} siswa kelas XII`
+            : `${students.length} siswa kelas XII`}
+        </p>
+        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+          <label className="block w-full sm:w-56">
+            <span className="sr-only">Filter per kelas</span>
+            <select
+              value={selectedClass}
+              onChange={(event) => setSelectedClass(event.target.value)}
+              className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20"
+            >
+              <option value="">Semua kelas</option>
+              {classes.map((className) => <option key={className} value={className}>{className}</option>)}
+            </select>
+          </label>
+          <label className="relative block w-full sm:w-80">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Cari nama, email, atau kelas"
+              className="h-10 w-full rounded-md border border-slate-300 bg-white pl-9 pr-3 text-sm text-slate-900 outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-700/20"
+            />
+          </label>
+        </div>
       </div>
 
       <div className="overflow-x-auto border-y border-slate-200">
