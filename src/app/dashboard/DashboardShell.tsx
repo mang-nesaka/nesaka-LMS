@@ -14,6 +14,7 @@ import { useState } from 'react';
 import { logout } from '@/app/actions/auth';
 import InstallAppButton from './InstallAppButton';
 import PushNotificationControl from './PushNotificationControl';
+import DeviceOnboardingModal from './DeviceOnboardingModal';
 
 interface UserInfo {
   id: string;
@@ -421,6 +422,9 @@ export default function DashboardShell({ user, children }: DashboardShellProps) 
           {children}
         </main>
       </div>
+
+      {/* Pop-up Wizard Persiapan Izin Perangkat Pasca-Login */}
+      <DeviceOnboardingModal userRole={user.role} />
     </div>
   );
 }

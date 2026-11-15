@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { requireRole } from '@/lib/auth';
+import { sendPushToUsers } from '@/lib/webPush';
 
 export async function createExtracurricular(formData: FormData) {
   await requireRole('WAKA_KESISWAAN', 'ADMIN');
@@ -51,6 +52,23 @@ export async function createStudentAnnouncement(formData: FormData) {
   }
 
   await prisma.announcement.create({ data: { authorId: author.id, title, body } });
+
+  try {
+    const students = await prisma.user.findMany({
+      where: { role: 'STUDENT', graduationYear: null },
+      select: { id: true },
+    });
+    if (students.length > 0) {
+      await sendPushToUsers(students.map((s) => s.id), {
+        title: `Pengumuman: ${title}`,
+        body: body.length > 120 ? `${body.slice(0, 117)}...` : body,
+        url: '/dashboard',
+      });
+    }
+  } catch (error) {
+    console.error('Gagal mengirim push notification broadcast kesiswaan:', error);
+  }
+
   revalidatePath('/dashboard/kesiswaan');
   revalidatePath('/dashboard');
 }
