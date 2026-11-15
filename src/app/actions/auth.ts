@@ -7,16 +7,24 @@ import bcrypt from 'bcryptjs';
 import { AUTH_SESSION_MAX_AGE_SECONDS, createAuthToken } from '@/lib/auth-token';
 
 export async function login(formData: FormData) {
-  const email = formData.get('email') as string;
-  const password = formData.get('password') as string;
+  const rawEmail = formData.get('email');
+  const rawPassword = formData.get('password');
+
+  const email = typeof rawEmail === 'string' ? rawEmail.trim().toLowerCase() : '';
+  const password = typeof rawPassword === 'string' ? rawPassword.trim() : '';
 
   if (!email || !password) {
     return { error: "Email dan kata sandi harus diisi." };
   }
 
-  // Find user
-  const user = await prisma.user.findUnique({
-    where: { email },
+  // Find user (case-insensitive email)
+  const user = await prisma.user.findFirst({
+    where: {
+      email: {
+        equals: email,
+        mode: 'insensitive',
+      },
+    },
   });
 
   if (!user) {
@@ -24,9 +32,25 @@ export async function login(formData: FormData) {
   }
 
   const isPasswordHash = user.password.startsWith('$2');
-  const passwordMatches = isPasswordHash
-    ? await bcrypt.compare(password, user.password)
-    : user.password === password;
+  let passwordMatches = false;
+
+  if (isPasswordHash) {
+    passwordMatches = await bcrypt.compare(password, user.password);
+
+    // Fallback: If password entered has leading zeros (e.g. NISN 0087485164) but DB dropped them (87485164)
+    if (!passwordMatches && /^0+\d+$/.test(password)) {
+      const stripped = password.replace(/^0+/, '');
+      passwordMatches = await bcrypt.compare(stripped, user.password);
+    } else if (!passwordMatches && /^\d+$/.test(password)) {
+      passwordMatches =
+        (await bcrypt.compare(`00${password}`, user.password)) ||
+        (await bcrypt.compare(`0${password}`, user.password));
+    }
+  } else {
+    passwordMatches =
+      user.password === password ||
+      user.password.replace(/^0+/, '') === password.replace(/^0+/, '');
+  }
 
   if (!passwordMatches) {
     return { error: "Email atau kata sandi salah." };
